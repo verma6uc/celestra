@@ -3,6 +3,7 @@ package com.celestra.dao.impl;
 import static org.junit.Assert.*;
 
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -40,26 +41,37 @@ public class UserSessionDaoImplTest extends BaseDaoTest {
         // Clean up any existing test data
         cleanupTestData();
         
-        // Insert test user
+        // First insert test company to satisfy foreign key constraints
+        executeSQL("INSERT INTO companies (id, name, description, size, vertical, status, created_at, updated_at) " +
+                   "VALUES (1, 'Test Company 1', 'Test Company Description 1', 'SMALL'::company_size, 'TECH'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW())");
+        
+        // Insert test users
         executeSQL("INSERT INTO users (id, company_id, role, email, name, password_hash, status, created_at, updated_at) " +
-                   "VALUES (999, 1, 'REGULAR_USER', 'testuser@test.com', 'Test User', 'hash123', 'ACTIVE', NOW(), NOW())");
+                   "VALUES (999, 1, 'REGULAR_USER'::user_role, 'testuser@test.com', 'Test User', 'hash123', 'ACTIVE'::user_status, NOW(), NOW())");
+        
+        executeSQL("INSERT INTO users (id, company_id, role, email, name, password_hash, status, created_at, updated_at) " +
+                   "VALUES (998, 1, 'REGULAR_USER'::user_role, 'testuser2@test.com', 'Test User 2', 'hash456', 'ACTIVE'::user_status, NOW(), NOW())");
+        
+        executeSQL("INSERT INTO users (id, company_id, role, email, name, password_hash, status, created_at, updated_at) " +
+                   "VALUES (997, 1, 'REGULAR_USER'::user_role, 'testuser3@test.com', 'Test User 3', 'hash789', 'ACTIVE'::user_status, NOW(), NOW())");
         
         // Insert test sessions
         executeSQL("INSERT INTO user_sessions (user_id, session_token, ip_address, user_agent, created_at, expires_at) " +
-                   "VALUES (999, 'active-token-1', '192.168.1.1', 'Test User Agent 1', NOW(), DATE_ADD(NOW(), INTERVAL 1 DAY))");
+                   "VALUES (999, 'active-token-1', '192.168.1.1', 'Test User Agent 1', NOW(), NOW() + INTERVAL '1 day')");
         
         executeSQL("INSERT INTO user_sessions (user_id, session_token, ip_address, user_agent, created_at, expires_at) " +
-                   "VALUES (999, 'active-token-2', '192.168.1.2', 'Test User Agent 2', NOW(), DATE_ADD(NOW(), INTERVAL 1 DAY))");
+                   "VALUES (999, 'active-token-2', '192.168.1.2', 'Test User Agent 2', NOW(), NOW() + INTERVAL '1 day')");
         
         executeSQL("INSERT INTO user_sessions (user_id, session_token, ip_address, user_agent, created_at, expires_at) " +
-                   "VALUES (999, 'expired-token', '192.168.1.3', 'Test User Agent 3', NOW(), DATE_SUB(NOW(), INTERVAL 1 DAY))");
+                   "VALUES (999, 'expired-token', '192.168.1.3', 'Test User Agent 3', NOW(), NOW() - INTERVAL '1 day')");
     }
     
     @Override
     protected void cleanupTestData() throws SQLException {
         executeSQL("DELETE FROM user_sessions WHERE session_token LIKE 'test-%' OR " +
                    "session_token LIKE 'active-token-%' OR session_token = 'expired-token'");
-        executeSQL("DELETE FROM users WHERE email = 'testuser@test.com'");
+        executeSQL("DELETE FROM users WHERE email IN ('testuser@test.com', 'testuser2@test.com', 'testuser3@test.com')");
+        executeSQL("DELETE FROM companies WHERE id = 1");
     }
     
     /**
@@ -73,8 +85,8 @@ public class UserSessionDaoImplTest extends BaseDaoTest {
         userSession.setSessionToken("test-token-" + UUID.randomUUID().toString());
         userSession.setIpAddress("192.168.1.100");
         userSession.setUserAgent("Test User Agent");
-        userSession.setCreatedAt(OffsetDateTime.now());
-        userSession.setExpiresAt(OffsetDateTime.now().plusDays(1));
+        userSession.setCreatedAt(new Timestamp(System.currentTimeMillis()));
+        userSession.setExpiresAt(new Timestamp(System.currentTimeMillis() + 86400000)); // +1 day
         
         UserSession createdUserSession = userSessionDao.create(userSession);
         
@@ -134,8 +146,8 @@ public class UserSessionDaoImplTest extends BaseDaoTest {
         userSession.setSessionToken("test-token-" + UUID.randomUUID().toString());
         userSession.setIpAddress("192.168.1.101");
         userSession.setUserAgent("Test User Agent Update");
-        userSession.setCreatedAt(OffsetDateTime.now());
-        userSession.setExpiresAt(OffsetDateTime.now().plusDays(1));
+        userSession.setCreatedAt(new Timestamp(System.currentTimeMillis()));
+        userSession.setExpiresAt(new Timestamp(System.currentTimeMillis() + 86400000)); // +1 day
         
         UserSession createdUserSession = userSessionDao.create(userSession);
         
@@ -165,8 +177,8 @@ public class UserSessionDaoImplTest extends BaseDaoTest {
         userSession.setSessionToken("test-token-" + UUID.randomUUID().toString());
         userSession.setIpAddress("192.168.1.103");
         userSession.setUserAgent("Test User Agent Delete");
-        userSession.setCreatedAt(OffsetDateTime.now());
-        userSession.setExpiresAt(OffsetDateTime.now().plusDays(1));
+        userSession.setCreatedAt(new Timestamp(System.currentTimeMillis()));
+        userSession.setExpiresAt(new Timestamp(System.currentTimeMillis() + 86400000)); // +1 day
         
         UserSession createdUserSession = userSessionDao.create(userSession);
         
@@ -289,13 +301,13 @@ public class UserSessionDaoImplTest extends BaseDaoTest {
         userSession.setSessionToken("test-token-" + UUID.randomUUID().toString());
         userSession.setIpAddress("192.168.1.104");
         userSession.setUserAgent("Test User Agent Expires");
-        userSession.setCreatedAt(OffsetDateTime.now());
-        userSession.setExpiresAt(OffsetDateTime.now().plusHours(1));
+        userSession.setCreatedAt(new Timestamp(System.currentTimeMillis()));
+        userSession.setExpiresAt(new Timestamp(System.currentTimeMillis() + 3600000)); // +1 hour
         
         UserSession createdUserSession = userSessionDao.create(userSession);
         
         // Update the expiration time
-        OffsetDateTime newExpiresAt = OffsetDateTime.now().plusDays(7);
+        Timestamp newExpiresAt = new Timestamp(System.currentTimeMillis() + 7 * 86400000); // +7 days
         boolean updated = userSessionDao.updateExpiresAt(createdUserSession.getId(), newExpiresAt);
         
         // Verify the expiration time was updated
@@ -304,7 +316,7 @@ public class UserSessionDaoImplTest extends BaseDaoTest {
         Optional<UserSession> updatedUserSession = userSessionDao.findById(createdUserSession.getId());
         assertTrue("User session should be found after expiration update", updatedUserSession.isPresent());
         assertTrue("User session expiration time should be updated", 
-                   updatedUserSession.get().getExpiresAt().isAfter(OffsetDateTime.now().plusDays(6)));
+                   updatedUserSession.get().getExpiresAt().after(new Timestamp(System.currentTimeMillis() + 6 * 86400000))); // +6 days
         
         // Clean up
         boolean deleted = userSessionDao.delete(createdUserSession.getId());
@@ -332,14 +344,14 @@ public class UserSessionDaoImplTest extends BaseDaoTest {
      */
     @Test
     public void testDeleteByUserId() throws SQLException {
-        // Create a new user session for a different user
+        // Create a new user session for user 998
         UserSession userSession = new UserSession();
         userSession.setUserId(998);
         userSession.setSessionToken("test-token-" + UUID.randomUUID().toString());
         userSession.setIpAddress("192.168.1.105");
         userSession.setUserAgent("Test User Agent Delete By User");
-        userSession.setCreatedAt(OffsetDateTime.now());
-        userSession.setExpiresAt(OffsetDateTime.now().plusDays(1));
+        userSession.setCreatedAt(new Timestamp(System.currentTimeMillis()));
+        userSession.setExpiresAt(new Timestamp(System.currentTimeMillis() + 86400000)); // +1 day
         
         UserSession createdUserSession = userSessionDao.create(userSession);
         
@@ -364,8 +376,8 @@ public class UserSessionDaoImplTest extends BaseDaoTest {
         userSession1.setSessionToken("test-token-" + UUID.randomUUID().toString());
         userSession1.setIpAddress("192.168.1.106");
         userSession1.setUserAgent("Test User Agent 1");
-        userSession1.setCreatedAt(OffsetDateTime.now());
-        userSession1.setExpiresAt(OffsetDateTime.now().plusDays(1));
+        userSession1.setCreatedAt(new Timestamp(System.currentTimeMillis()));
+        userSession1.setExpiresAt(new Timestamp(System.currentTimeMillis() + 86400000)); // +1 day
         
         UserSession createdUserSession1 = userSessionDao.create(userSession1);
         
@@ -374,8 +386,8 @@ public class UserSessionDaoImplTest extends BaseDaoTest {
         userSession2.setSessionToken("test-token-" + UUID.randomUUID().toString());
         userSession2.setIpAddress("192.168.1.107");
         userSession2.setUserAgent("Test User Agent 2");
-        userSession2.setCreatedAt(OffsetDateTime.now());
-        userSession2.setExpiresAt(OffsetDateTime.now().plusDays(1));
+        userSession2.setCreatedAt(new Timestamp(System.currentTimeMillis()));
+        userSession2.setExpiresAt(new Timestamp(System.currentTimeMillis() + 86400000)); // +1 day
         
         UserSession createdUserSession2 = userSessionDao.create(userSession2);
         
