@@ -63,7 +63,7 @@ public class RegistrationServiceImplTest {
     @Test
     public void testRegisterUser_Success() throws SQLException {
         // Arrange
-        String email = "test@example.com";
+        String email = "nupur.bhaisare@leucinetech.com";
         String name = "Test User";
         String password = "Password123!";
         UserRole role = UserRole.REGULAR_USER;
@@ -94,7 +94,7 @@ public class RegistrationServiceImplTest {
         assertEquals(UserStatus.ACTIVE, result.getStatus());
         
         // Verify interactions
-        verify(userDao).findByEmail(email);
+        verify(userDao, times(2)).findByEmail(email);
         verify(userDao).create(any(User.class));
         verify(userDao).addPasswordToHistory(eq(1), anyString());
         verify(userDao, times(2)).findByEmail(email);
@@ -103,7 +103,7 @@ public class RegistrationServiceImplTest {
     @Test
     public void testRegisterUser_WithEmailVerification() throws SQLException {
         // Arrange
-        String email = "test@example.com";
+        String email = "nupur.bhaisare@leucinetech.com";
         String name = "Test User";
         String password = "Password123!";
         UserRole role = UserRole.REGULAR_USER;
@@ -135,7 +135,7 @@ public class RegistrationServiceImplTest {
         assertEquals(UserStatus.SUSPENDED, result.getStatus());
         
         // Verify interactions
-        verify(userDao).findByEmail(email);
+        verify(userDao, times(2)).findByEmail(email);
         verify(userDao).create(any(User.class));
         verify(userDao).addPasswordToHistory(eq(1), anyString());
         verify(invitationDao).create(any(Invitation.class));
@@ -145,7 +145,7 @@ public class RegistrationServiceImplTest {
     @Test
     public void testRegisterUser_EmailAlreadyInUse() throws SQLException {
         // Arrange
-        String email = "test@example.com";
+        String email = "nupur.bhaisare@leucinetech.com";
         String name = "Test User";
         String password = "Password123!";
         UserRole role = UserRole.REGULAR_USER;
@@ -174,7 +174,7 @@ public class RegistrationServiceImplTest {
     @Test
     public void testRegisterUser_InvalidPassword() throws SQLException {
         // Arrange
-        String email = "test@example.com";
+        String email = "nupur.bhaisare@leucinetech.com";
         String name = "Test User";
         String password = "weak";
         UserRole role = UserRole.REGULAR_USER;
@@ -207,7 +207,7 @@ public class RegistrationServiceImplTest {
         
         User user = new User();
         user.setId(1);
-        user.setEmail("test@example.com");
+        user.setEmail("nupur.bhaisare@leucinetech.com");
         user.setStatus(UserStatus.SUSPENDED);
         
         Invitation invitation = new Invitation();
@@ -225,7 +225,7 @@ public class RegistrationServiceImplTest {
         
         // Assert
         assertNotNull(result);
-        assertEquals("test@example.com", result.getEmail());
+        assertEquals("nupur.bhaisare@leucinetech.com", result.getEmail());
         
         // Verify interactions
         verify(invitationDao).findByToken(token);
@@ -286,7 +286,7 @@ public class RegistrationServiceImplTest {
         
         User user = new User();
         user.setId(1);
-        user.setEmail("test@example.com");
+        user.setEmail("nupur.bhaisare@leucinetech.com");
         user.setStatus(UserStatus.SUSPENDED);
         
         Invitation invitation = new Invitation();
@@ -347,7 +347,7 @@ public class RegistrationServiceImplTest {
     @Test
     public void testValidateEmail() {
         // Valid emails
-        assertTrue(registrationService.validateEmail("test@example.com"));
+        assertTrue(registrationService.validateEmail("nupur.bhaisare@leucinetech.com"));
         assertTrue(registrationService.validateEmail("user.name+tag@example.co.uk"));
         assertTrue(registrationService.validateEmail("user-name@example.org"));
         
