@@ -26,8 +26,8 @@ public class InvitationSeeder {
     
     private static final Logger LOGGER = Logger.getLogger(InvitationSeeder.class.getName());
     
-    // Invitation status distribution (PENDING, ACCEPTED, EXPIRED, REVOKED)
-    private static final double[] INVITATION_STATUS_DISTRIBUTION = {0.4, 0.3, 0.2, 0.1};
+    // Invitation status distribution (PENDING, SENT, EXPIRED, CANCELLED, ACCEPTED)
+    private static final double[] INVITATION_STATUS_DISTRIBUTION = {0.3, 0.2, 0.2, 0.1, 0.2};
     
     private final Connection connection;
     private final InvitationDao invitationDao;
