@@ -1,8 +1,14 @@
 package com.celestra.dao.impl;
 
+import static org.junit.Assert.*;
+
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Optional;
+
+import org.junit.Before;
+import org.junit.Test;
 
 import com.celestra.dao.BaseDaoTest;
 import com.celestra.dao.PasswordHistoryDao;
@@ -16,48 +22,11 @@ public class PasswordHistoryDaoImplTest extends BaseDaoTest {
     private PasswordHistoryDao passwordHistoryDao;
     
     /**
-     * Main method to run the tests.
-     * 
-     * @param args Command line arguments (not used)
+     * Initialize the DAO before each test.
      */
-    public static void main(String[] args) {
-        PasswordHistoryDaoImplTest test = new PasswordHistoryDaoImplTest();
-        test.runTests();
-    }
-    
-    /**
-     * Constructor.
-     */
-    public PasswordHistoryDaoImplTest() {
+    @Before
+    public void initialize() {
         passwordHistoryDao = new PasswordHistoryDaoImpl();
-    }
-    
-    /**
-     * Run all tests.
-     */
-    public void runTests() {
-        try {
-            setUp();
-            
-            testCreate();
-            testFindById();
-            testFindAll();
-            testUpdate();
-            testDelete();
-            testFindByUserId();
-            testFindRecentByUserId();
-            testExistsByUserIdAndPasswordHash();
-            testDeleteByUserId();
-            testDeleteOlderThan();
-            testDeleteOldestByUserId();
-            
-            tearDown();
-            
-            System.out.println("All tests completed.");
-        } catch (Exception e) {
-            System.err.println("Error running tests: " + e.getMessage());
-            e.printStackTrace();
-        }
     }
     
     @Override
@@ -97,242 +66,229 @@ public class PasswordHistoryDaoImplTest extends BaseDaoTest {
     /**
      * Test the create method.
      */
-    private void testCreate() {
-        try {
-            // Create a new password history entry
-            PasswordHistory passwordHistory = new PasswordHistory();
-            passwordHistory.setUserId(999);
-            passwordHistory.setPasswordHash("testhash1");
-            passwordHistory.setCreatedAt(OffsetDateTime.now());
-            
-            PasswordHistory createdPasswordHistory = passwordHistoryDao.create(passwordHistory);
-            
-            // Verify the password history entry was created
-            boolean success = createdPasswordHistory.getId() > 0;
-            printTestResult("testCreate", success);
-            
-            // Clean up
-            if (success) {
-                passwordHistoryDao.delete(createdPasswordHistory.getId());
-            }
-        } catch (Exception e) {
-            printTestFailure("testCreate", e);
-        }
+    @Test
+    public void testCreate() throws SQLException {
+        // Create a new password history entry
+        PasswordHistory passwordHistory = new PasswordHistory();
+        passwordHistory.setUserId(999);
+        passwordHistory.setPasswordHash("testhash1");
+        passwordHistory.setCreatedAt(OffsetDateTime.now());
+        
+        PasswordHistory createdPasswordHistory = passwordHistoryDao.create(passwordHistory);
+        
+        // Verify the password history entry was created
+        assertNotNull("Created password history should not be null", createdPasswordHistory);
+        assertTrue("Created password history should have an ID", createdPasswordHistory.getId() > 0);
+        
+        // Clean up
+        boolean deleted = passwordHistoryDao.delete(createdPasswordHistory.getId());
+        assertTrue("Password history should be deleted successfully", deleted);
     }
     
     /**
      * Test the findById method.
      */
-    private void testFindById() {
-        try {
-            // Find all password history entries
-            List<PasswordHistory> passwordHistories = passwordHistoryDao.findAll();
-            
-            // Verify there are password history entries
-            if (passwordHistories.isEmpty()) {
-                printTestResult("testFindById", false, "No password history entries found");
-                return;
-            }
-            
-            // Get the first password history entry
-            PasswordHistory passwordHistory = passwordHistories.get(0);
-            
-            // Find the password history entry by ID
-            java.util.Optional<PasswordHistory> foundPasswordHistory = passwordHistoryDao.findById(passwordHistory.getId());
-            
-            // Verify the password history entry was found
-            boolean success = foundPasswordHistory.isPresent() && 
-                              foundPasswordHistory.get().getId().equals(passwordHistory.getId()) &&
-                              foundPasswordHistory.get().getPasswordHash().equals(passwordHistory.getPasswordHash());
-            
-            printTestResult("testFindById", success);
-        } catch (Exception e) {
-            printTestFailure("testFindById", e);
-        }
+    @Test
+    public void testFindById() throws SQLException {
+        // Find all password history entries
+        List<PasswordHistory> passwordHistories = passwordHistoryDao.findAll();
+        
+        // Verify there are password history entries
+        assertFalse("There should be password history entries in the database", passwordHistories.isEmpty());
+        
+        // Get the first password history entry
+        PasswordHistory passwordHistory = passwordHistories.get(0);
+        
+        // Find the password history entry by ID
+        Optional<PasswordHistory> foundPasswordHistory = passwordHistoryDao.findById(passwordHistory.getId());
+        
+        // Verify the password history entry was found
+        assertTrue("Password history should be found by ID", foundPasswordHistory.isPresent());
+        assertEquals("Found password history ID should match", passwordHistory.getId(), foundPasswordHistory.get().getId());
+        assertEquals("Found password history hash should match", passwordHistory.getPasswordHash(), foundPasswordHistory.get().getPasswordHash());
     }
     
     /**
      * Test the findAll method.
      */
-    private void testFindAll() {
-        try {
-            // Find all password history entries
-            List<PasswordHistory> passwordHistories = passwordHistoryDao.findAll();
-            
-            // Verify there are password history entries
-            boolean success = !passwordHistories.isEmpty();
-            printTestResult("testFindAll", success, "Found " + passwordHistories.size() + " password history entries");
-        } catch (Exception e) {
-            printTestFailure("testFindAll", e);
-        }
+    @Test
+    public void testFindAll() throws SQLException {
+        // Find all password history entries
+        List<PasswordHistory> passwordHistories = passwordHistoryDao.findAll();
+        
+        // Verify there are password history entries
+        assertFalse("There should be password history entries in the database", passwordHistories.isEmpty());
+        assertTrue("There should be at least 4 password history entries", passwordHistories.size() >= 4);
     }
     
     /**
      * Test the update method.
      */
-    private void testUpdate() {
-        try {
-            // Create a new password history entry
-            PasswordHistory passwordHistory = new PasswordHistory();
-            passwordHistory.setUserId(999);
-            passwordHistory.setPasswordHash("testhash2");
-            passwordHistory.setCreatedAt(OffsetDateTime.now());
-            
-            PasswordHistory createdPasswordHistory = passwordHistoryDao.create(passwordHistory);
-            
-            // Update the password history entry
-            createdPasswordHistory.setPasswordHash("updatedhash");
-            
-            PasswordHistory updatedPasswordHistory = passwordHistoryDao.update(createdPasswordHistory);
-            
-            // Verify the password history entry was updated
-            boolean success = updatedPasswordHistory.getPasswordHash().equals("updatedhash");
-            
-            printTestResult("testUpdate", success);
-            
-            // Clean up
-            passwordHistoryDao.delete(createdPasswordHistory.getId());
-        } catch (Exception e) {
-            printTestFailure("testUpdate", e);
-        }
+    @Test
+    public void testUpdate() throws SQLException {
+        // Create a new password history entry
+        PasswordHistory passwordHistory = new PasswordHistory();
+        passwordHistory.setUserId(999);
+        passwordHistory.setPasswordHash("testhash2");
+        passwordHistory.setCreatedAt(OffsetDateTime.now());
+        
+        PasswordHistory createdPasswordHistory = passwordHistoryDao.create(passwordHistory);
+        
+        // Update the password history entry
+        createdPasswordHistory.setPasswordHash("updatedhash");
+        
+        PasswordHistory updatedPasswordHistory = passwordHistoryDao.update(createdPasswordHistory);
+        
+        // Verify the password history entry was updated
+        assertEquals("Password history hash should be updated", "updatedhash", updatedPasswordHistory.getPasswordHash());
+        
+        // Clean up
+        boolean deleted = passwordHistoryDao.delete(createdPasswordHistory.getId());
+        assertTrue("Password history should be deleted successfully", deleted);
     }
     
     /**
      * Test the delete method.
      */
-    private void testDelete() {
-        try {
-            // Create a new password history entry
-            PasswordHistory passwordHistory = new PasswordHistory();
-            passwordHistory.setUserId(999);
-            passwordHistory.setPasswordHash("testhash3");
-            passwordHistory.setCreatedAt(OffsetDateTime.now());
-            
-            PasswordHistory createdPasswordHistory = passwordHistoryDao.create(passwordHistory);
-            
-            // Delete the password history entry
-            boolean deleted = passwordHistoryDao.delete(createdPasswordHistory.getId());
-            
-            // Verify the password history entry was deleted
-            boolean success = deleted && !passwordHistoryDao.findById(createdPasswordHistory.getId()).isPresent();
-            
-            printTestResult("testDelete", success);
-        } catch (Exception e) {
-            printTestFailure("testDelete", e);
-        }
+    @Test
+    public void testDelete() throws SQLException {
+        // Create a new password history entry
+        PasswordHistory passwordHistory = new PasswordHistory();
+        passwordHistory.setUserId(999);
+        passwordHistory.setPasswordHash("testhash3");
+        passwordHistory.setCreatedAt(OffsetDateTime.now());
+        
+        PasswordHistory createdPasswordHistory = passwordHistoryDao.create(passwordHistory);
+        
+        // Delete the password history entry
+        boolean deleted = passwordHistoryDao.delete(createdPasswordHistory.getId());
+        
+        // Verify the password history entry was deleted
+        assertTrue("Password history should be deleted successfully", deleted);
+        
+        Optional<PasswordHistory> foundPasswordHistory = passwordHistoryDao.findById(createdPasswordHistory.getId());
+        assertFalse("Password history should not be found after deletion", foundPasswordHistory.isPresent());
     }
     
     /**
      * Test the findByUserId method.
      */
-    private void testFindByUserId() {
-        try {
-            // Find password history entries by user ID
-            List<PasswordHistory> passwordHistories = passwordHistoryDao.findByUserId(999);
-            
-            // Verify there are password history entries
-            boolean success = !passwordHistories.isEmpty();
-            printTestResult("testFindByUserId", success, 
-                    "Found " + passwordHistories.size() + " password history entries for user ID 999");
-        } catch (Exception e) {
-            printTestFailure("testFindByUserId", e);
+    @Test
+    public void testFindByUserId() throws SQLException {
+        // Find password history entries by user ID
+        List<PasswordHistory> passwordHistories = passwordHistoryDao.findByUserId(999);
+        
+        // Verify there are password history entries
+        assertFalse("There should be password history entries for user ID 999", passwordHistories.isEmpty());
+        
+        // Verify all entries have the correct user ID
+        for (PasswordHistory passwordHistory : passwordHistories) {
+            assertEquals("Password history user ID should be 999", Integer.valueOf(999), passwordHistory.getUserId());
         }
     }
     
     /**
      * Test the findRecentByUserId method.
      */
-    private void testFindRecentByUserId() {
-        try {
-            // Find recent password history entries by user ID
-            List<PasswordHistory> passwordHistories = passwordHistoryDao.findRecentByUserId(999, 2);
-            
-            // Verify there are password history entries and the limit is respected
-            boolean success = !passwordHistories.isEmpty() && passwordHistories.size() <= 2;
-            printTestResult("testFindRecentByUserId", success, 
-                    "Found " + passwordHistories.size() + " recent password history entries for user ID 999");
-        } catch (Exception e) {
-            printTestFailure("testFindRecentByUserId", e);
+    @Test
+    public void testFindRecentByUserId() throws SQLException {
+        // Find recent password history entries by user ID
+        List<PasswordHistory> passwordHistories = passwordHistoryDao.findRecentByUserId(999, 2);
+        
+        // Verify there are password history entries and the limit is respected
+        assertFalse("There should be recent password history entries for user ID 999", passwordHistories.isEmpty());
+        assertTrue("There should be at most 2 recent password history entries", passwordHistories.size() <= 2);
+        
+        // Verify all entries have the correct user ID
+        for (PasswordHistory passwordHistory : passwordHistories) {
+            assertEquals("Password history user ID should be 999", Integer.valueOf(999), passwordHistory.getUserId());
         }
     }
     
     /**
      * Test the existsByUserIdAndPasswordHash method.
      */
-    private void testExistsByUserIdAndPasswordHash() {
-        try {
-            // Check if a password hash exists for a user
-            boolean exists = passwordHistoryDao.existsByUserIdAndPasswordHash(999, "oldhash1");
-            
-            // Verify the password hash exists
-            printTestResult("testExistsByUserIdAndPasswordHash", exists, 
-                    "Password hash 'oldhash1' " + (exists ? "exists" : "does not exist") + " for user ID 999");
-        } catch (Exception e) {
-            printTestFailure("testExistsByUserIdAndPasswordHash", e);
-        }
+    @Test
+    public void testExistsByUserIdAndPasswordHash() throws SQLException {
+        // Check if a password hash exists for a user
+        boolean exists = passwordHistoryDao.existsByUserIdAndPasswordHash(999, "oldhash1");
+        
+        // Verify the password hash exists
+        assertTrue("Password hash 'oldhash1' should exist for user ID 999", exists);
+        
+        // Check if a non-existent password hash exists
+        boolean notExists = passwordHistoryDao.existsByUserIdAndPasswordHash(999, "nonexistenthash");
+        
+        // Verify the password hash does not exist
+        assertFalse("Password hash 'nonexistenthash' should not exist for user ID 999", notExists);
     }
     
     /**
      * Test the deleteByUserId method.
      */
-    private void testDeleteByUserId() {
-        try {
-            // Create a new password history entry for a different user
-            PasswordHistory passwordHistory = new PasswordHistory();
-            passwordHistory.setUserId(998);
-            passwordHistory.setPasswordHash("testhash4");
-            passwordHistory.setCreatedAt(OffsetDateTime.now());
-            
-            PasswordHistory createdPasswordHistory = passwordHistoryDao.create(passwordHistory);
-            
-            // Delete password history entries by user ID
-            int deleted = passwordHistoryDao.deleteByUserId(998);
-            
-            // Verify the password history entries were deleted
-            boolean success = deleted > 0 && !passwordHistoryDao.findById(createdPasswordHistory.getId()).isPresent();
-            
-            printTestResult("testDeleteByUserId", success, 
-                    "Deleted " + deleted + " password history entries for user ID 998");
-        } catch (Exception e) {
-            printTestFailure("testDeleteByUserId", e);
-        }
+    @Test
+    public void testDeleteByUserId() throws SQLException {
+        // Create a new password history entry for a different user
+        PasswordHistory passwordHistory = new PasswordHistory();
+        passwordHistory.setUserId(998);
+        passwordHistory.setPasswordHash("testhash4");
+        passwordHistory.setCreatedAt(OffsetDateTime.now());
+        
+        PasswordHistory createdPasswordHistory = passwordHistoryDao.create(passwordHistory);
+        
+        // Delete password history entries by user ID
+        int deleted = passwordHistoryDao.deleteByUserId(998);
+        
+        // Verify password history entries were deleted
+        assertTrue("At least one password history entry should be deleted", deleted > 0);
+        
+        Optional<PasswordHistory> foundPasswordHistory = passwordHistoryDao.findById(createdPasswordHistory.getId());
+        assertFalse("Password history should not be found after deletion", foundPasswordHistory.isPresent());
     }
     
     /**
      * Test the deleteOlderThan method.
      */
-    private void testDeleteOlderThan() {
-        try {
-            // Delete password history entries older than 15 days
-            OffsetDateTime cutoffDate = OffsetDateTime.now().minusDays(15);
-            int deleted = passwordHistoryDao.deleteOlderThan(cutoffDate);
-            
-            // Verify old password history entries were deleted
-            boolean success = deleted > 0;
-            printTestResult("testDeleteOlderThan", success, 
-                    "Deleted " + deleted + " password history entries older than 15 days");
-        } catch (Exception e) {
-            printTestFailure("testDeleteOlderThan", e);
+    @Test
+    public void testDeleteOlderThan() throws SQLException {
+        // Delete password history entries older than 15 days
+        OffsetDateTime cutoffDate = OffsetDateTime.now().minusDays(15);
+        int deleted = passwordHistoryDao.deleteOlderThan(cutoffDate);
+        
+        // Verify old password history entries were deleted
+        assertTrue("At least one old password history entry should be deleted", deleted > 0);
+        
+        // Verify no entries older than 15 days remain
+        List<PasswordHistory> allEntries = passwordHistoryDao.findAll();
+        for (PasswordHistory entry : allEntries) {
+            if (entry.getUserId() == 999) {
+                assertTrue("Remaining entries should be newer than cutoff date", 
+                           entry.getCreatedAt().isAfter(cutoffDate));
+            }
         }
     }
     
     /**
      * Test the deleteOldestByUserId method.
      */
-    private void testDeleteOldestByUserId() {
-        try {
-            // Delete oldest password history entries, keeping only the most recent 2
-            int deleted = passwordHistoryDao.deleteOldestByUserId(999, 2);
-            
-            // Verify old password history entries were deleted
-            List<PasswordHistory> remainingEntries = passwordHistoryDao.findByUserId(999);
-            boolean success = deleted > 0 && remainingEntries.size() <= 2;
-            
-            printTestResult("testDeleteOldestByUserId", success, 
-                    "Deleted " + deleted + " oldest password history entries for user ID 999, " + 
-                    remainingEntries.size() + " entries remaining");
-        } catch (Exception e) {
-            printTestFailure("testDeleteOldestByUserId", e);
-        }
+    @Test
+    public void testDeleteOldestByUserId() throws SQLException {
+        // Count initial entries
+        List<PasswordHistory> initialEntries = passwordHistoryDao.findByUserId(999);
+        int initialCount = initialEntries.size();
+        
+        // Delete oldest password history entries, keeping only the most recent 2
+        int deleted = passwordHistoryDao.deleteOldestByUserId(999, 2);
+        
+        // Verify old password history entries were deleted
+        assertTrue("At least one old password history entry should be deleted", deleted > 0);
+        
+        // Verify only 2 entries remain
+        List<PasswordHistory> remainingEntries = passwordHistoryDao.findByUserId(999);
+        assertEquals("There should be 2 password history entries remaining", 2, remainingEntries.size());
+        
+        // Verify the total number of deleted entries is correct
+        assertEquals("The number of deleted entries should be correct", 
+                     initialCount - 2, deleted);
     }
 }

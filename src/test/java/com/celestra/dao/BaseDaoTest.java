@@ -4,6 +4,9 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import org.junit.After;
+import org.junit.Before;
+
 import com.celestra.db.DatabaseUtil;
 
 /**
@@ -14,11 +17,12 @@ public abstract class BaseDaoTest {
     
     /**
      * Set up the test environment.
-     * This method should be called at the beginning of each test.
+     * This method is called before each test.
      * 
      * @throws SQLException if a database access error occurs
      */
-    protected void setUp() throws SQLException {
+    @Before
+    public void setUp() throws SQLException {
         // Create test tables if needed
         createTestTables();
         
@@ -28,11 +32,12 @@ public abstract class BaseDaoTest {
     
     /**
      * Tear down the test environment.
-     * This method should be called at the end of each test.
+     * This method is called after each test.
      * 
      * @throws SQLException if a database access error occurs
      */
-    protected void tearDown() throws SQLException {
+    @After
+    public void tearDown() throws SQLException {
         // Clean up test data
         cleanupTestData();
     }
@@ -69,45 +74,5 @@ public abstract class BaseDaoTest {
              Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
         }
-    }
-    
-    /**
-     * Print a test result.
-     * 
-     * @param testName The name of the test
-     * @param success Whether the test was successful
-     * @param message Additional message (optional)
-     */
-    protected void printTestResult(String testName, boolean success, String message) {
-        System.out.println("Test: " + testName);
-        System.out.println("Result: " + (success ? "SUCCESS" : "FAILURE"));
-        if (message != null && !message.isEmpty()) {
-            System.out.println("Message: " + message);
-        }
-        System.out.println();
-    }
-    
-    /**
-     * Print a test result.
-     * 
-     * @param testName The name of the test
-     * @param success Whether the test was successful
-     */
-    protected void printTestResult(String testName, boolean success) {
-        printTestResult(testName, success, null);
-    }
-    
-    /**
-     * Print a test failure.
-     * 
-     * @param testName The name of the test
-     * @param e The exception that caused the failure
-     */
-    protected void printTestFailure(String testName, Exception e) {
-        System.out.println("Test: " + testName);
-        System.out.println("Result: FAILURE");
-        System.out.println("Exception: " + e.getClass().getName());
-        System.out.println("Message: " + e.getMessage());
-        System.out.println();
     }
 }

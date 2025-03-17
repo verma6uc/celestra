@@ -1,9 +1,14 @@
 package com.celestra.dao.impl;
 
+import static org.junit.Assert.*;
+
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+
+import org.junit.Before;
+import org.junit.Test;
 
 import com.celestra.dao.BaseDaoTest;
 import com.celestra.dao.UserLockoutDao;
@@ -17,52 +22,11 @@ public class UserLockoutDaoImplTest extends BaseDaoTest {
     private UserLockoutDao userLockoutDao;
     
     /**
-     * Main method to run the tests.
-     * 
-     * @param args Command line arguments (not used)
+     * Initialize the DAO before each test.
      */
-    public static void main(String[] args) {
-        UserLockoutDaoImplTest test = new UserLockoutDaoImplTest();
-        test.runTests();
-    }
-    
-    /**
-     * Constructor.
-     */
-    public UserLockoutDaoImplTest() {
+    @Before
+    public void initialize() {
         userLockoutDao = new UserLockoutDaoImpl();
-    }
-    
-    /**
-     * Run all tests.
-     */
-    public void runTests() {
-        try {
-            setUp();
-            
-            testCreate();
-            testFindById();
-            testFindAll();
-            testUpdate();
-            testDelete();
-            testFindActiveByUserId();
-            testFindByUserId();
-            testFindAllActive();
-            testFindAllExpired();
-            testFindAllPermanent();
-            testFindAllTemporary();
-            testUpdateLockoutEnd();
-            testUpdateFailedAttempts();
-            testDeleteExpired();
-            testDeleteByUserId();
-            
-            tearDown();
-            
-            System.out.println("All tests completed.");
-        } catch (Exception e) {
-            System.err.println("Error running tests: " + e.getMessage());
-            e.printStackTrace();
-        }
     }
     
     @Override
@@ -99,350 +63,317 @@ public class UserLockoutDaoImplTest extends BaseDaoTest {
     /**
      * Test the create method.
      */
-    private void testCreate() {
-        try {
-            // Create a new user lockout
-            UserLockout userLockout = new UserLockout();
-            userLockout.setUserId(999);
-            userLockout.setLockoutStart(OffsetDateTime.now());
-            userLockout.setLockoutEnd(OffsetDateTime.now().plusHours(1));
-            userLockout.setFailedAttempts(3);
-            userLockout.setReason("Test create lockout");
-            
-            UserLockout createdUserLockout = userLockoutDao.create(userLockout);
-            
-            // Verify the user lockout was created
-            boolean success = createdUserLockout.getId() > 0;
-            printTestResult("testCreate", success);
-            
-            // Clean up
-            if (success) {
-                userLockoutDao.delete(createdUserLockout.getId());
-            }
-        } catch (Exception e) {
-            printTestFailure("testCreate", e);
-        }
+    @Test
+    public void testCreate() throws SQLException {
+        // Create a new user lockout
+        UserLockout userLockout = new UserLockout();
+        userLockout.setUserId(999);
+        userLockout.setLockoutStart(OffsetDateTime.now());
+        userLockout.setLockoutEnd(OffsetDateTime.now().plusHours(1));
+        userLockout.setFailedAttempts(3);
+        userLockout.setReason("Test create lockout");
+        
+        UserLockout createdUserLockout = userLockoutDao.create(userLockout);
+        
+        // Verify the user lockout was created
+        assertNotNull("Created user lockout should not be null", createdUserLockout);
+        assertTrue("Created user lockout should have an ID", createdUserLockout.getId() > 0);
+        
+        // Clean up
+        boolean deleted = userLockoutDao.delete(createdUserLockout.getId());
+        assertTrue("User lockout should be deleted successfully", deleted);
     }
     
     /**
      * Test the findById method.
      */
-    private void testFindById() {
-        try {
-            // Find all user lockouts
-            List<UserLockout> userLockouts = userLockoutDao.findAll();
-            
-            // Verify there are user lockouts
-            if (userLockouts.isEmpty()) {
-                printTestResult("testFindById", false, "No user lockouts found");
-                return;
-            }
-            
-            // Get the first user lockout
-            UserLockout userLockout = userLockouts.get(0);
-            
-            // Find the user lockout by ID
-            Optional<UserLockout> foundUserLockout = userLockoutDao.findById(userLockout.getId());
-            
-            // Verify the user lockout was found
-            boolean success = foundUserLockout.isPresent() && 
-                              foundUserLockout.get().getId().equals(userLockout.getId()) &&
-                              foundUserLockout.get().getUserId().equals(userLockout.getUserId());
-            
-            printTestResult("testFindById", success);
-        } catch (Exception e) {
-            printTestFailure("testFindById", e);
-        }
+    @Test
+    public void testFindById() throws SQLException {
+        // Find all user lockouts
+        List<UserLockout> userLockouts = userLockoutDao.findAll();
+        
+        // Verify there are user lockouts
+        assertFalse("There should be user lockouts in the database", userLockouts.isEmpty());
+        
+        // Get the first user lockout
+        UserLockout userLockout = userLockouts.get(0);
+        
+        // Find the user lockout by ID
+        Optional<UserLockout> foundUserLockout = userLockoutDao.findById(userLockout.getId());
+        
+        // Verify the user lockout was found
+        assertTrue("User lockout should be found by ID", foundUserLockout.isPresent());
+        assertEquals("Found user lockout ID should match", userLockout.getId(), foundUserLockout.get().getId());
+        assertEquals("Found user lockout user ID should match", userLockout.getUserId(), foundUserLockout.get().getUserId());
     }
     
     /**
      * Test the findAll method.
      */
-    private void testFindAll() {
-        try {
-            // Find all user lockouts
-            List<UserLockout> userLockouts = userLockoutDao.findAll();
-            
-            // Verify there are user lockouts
-            boolean success = !userLockouts.isEmpty();
-            printTestResult("testFindAll", success, "Found " + userLockouts.size() + " user lockouts");
-        } catch (Exception e) {
-            printTestFailure("testFindAll", e);
-        }
+    @Test
+    public void testFindAll() throws SQLException {
+        // Find all user lockouts
+        List<UserLockout> userLockouts = userLockoutDao.findAll();
+        
+        // Verify there are user lockouts
+        assertFalse("There should be user lockouts in the database", userLockouts.isEmpty());
+        assertTrue("There should be at least 3 user lockouts", userLockouts.size() >= 3);
     }
     
     /**
      * Test the update method.
      */
-    private void testUpdate() {
-        try {
-            // Create a new user lockout
-            UserLockout userLockout = new UserLockout();
-            userLockout.setUserId(999);
-            userLockout.setLockoutStart(OffsetDateTime.now());
-            userLockout.setLockoutEnd(OffsetDateTime.now().plusHours(1));
-            userLockout.setFailedAttempts(3);
-            userLockout.setReason("Test update lockout");
-            
-            UserLockout createdUserLockout = userLockoutDao.create(userLockout);
-            
-            // Update the user lockout
-            createdUserLockout.setFailedAttempts(5);
-            createdUserLockout.setReason("Updated test lockout");
-            
-            UserLockout updatedUserLockout = userLockoutDao.update(createdUserLockout);
-            
-            // Verify the user lockout was updated
-            boolean success = updatedUserLockout.getFailedAttempts() == 5 &&
-                              updatedUserLockout.getReason().equals("Updated test lockout");
-            
-            printTestResult("testUpdate", success);
-            
-            // Clean up
-            userLockoutDao.delete(createdUserLockout.getId());
-        } catch (Exception e) {
-            printTestFailure("testUpdate", e);
-        }
+    @Test
+    public void testUpdate() throws SQLException {
+        // Create a new user lockout
+        UserLockout userLockout = new UserLockout();
+        userLockout.setUserId(999);
+        userLockout.setLockoutStart(OffsetDateTime.now());
+        userLockout.setLockoutEnd(OffsetDateTime.now().plusHours(1));
+        userLockout.setFailedAttempts(3);
+        userLockout.setReason("Test update lockout");
+        
+        UserLockout createdUserLockout = userLockoutDao.create(userLockout);
+        
+        // Update the user lockout
+        createdUserLockout.setFailedAttempts(5);
+        createdUserLockout.setReason("Updated test lockout");
+        
+        UserLockout updatedUserLockout = userLockoutDao.update(createdUserLockout);
+        
+        // Verify the user lockout was updated
+        assertEquals("User lockout failed attempts should be updated", Integer.valueOf(5), updatedUserLockout.getFailedAttempts());
+        assertEquals("User lockout reason should be updated", "Updated test lockout", updatedUserLockout.getReason());
+        
+        // Clean up
+        boolean deleted = userLockoutDao.delete(createdUserLockout.getId());
+        assertTrue("User lockout should be deleted successfully", deleted);
     }
     
     /**
      * Test the delete method.
      */
-    private void testDelete() {
-        try {
-            // Create a new user lockout
-            UserLockout userLockout = new UserLockout();
-            userLockout.setUserId(999);
-            userLockout.setLockoutStart(OffsetDateTime.now());
-            userLockout.setLockoutEnd(OffsetDateTime.now().plusHours(1));
-            userLockout.setFailedAttempts(3);
-            userLockout.setReason("Test delete lockout");
-            
-            UserLockout createdUserLockout = userLockoutDao.create(userLockout);
-            
-            // Delete the user lockout
-            boolean deleted = userLockoutDao.delete(createdUserLockout.getId());
-            
-            // Verify the user lockout was deleted
-            boolean success = deleted && !userLockoutDao.findById(createdUserLockout.getId()).isPresent();
-            
-            printTestResult("testDelete", success);
-        } catch (Exception e) {
-            printTestFailure("testDelete", e);
-        }
+    @Test
+    public void testDelete() throws SQLException {
+        // Create a new user lockout
+        UserLockout userLockout = new UserLockout();
+        userLockout.setUserId(999);
+        userLockout.setLockoutStart(OffsetDateTime.now());
+        userLockout.setLockoutEnd(OffsetDateTime.now().plusHours(1));
+        userLockout.setFailedAttempts(3);
+        userLockout.setReason("Test delete lockout");
+        
+        UserLockout createdUserLockout = userLockoutDao.create(userLockout);
+        
+        // Delete the user lockout
+        boolean deleted = userLockoutDao.delete(createdUserLockout.getId());
+        
+        // Verify the user lockout was deleted
+        assertTrue("User lockout should be deleted successfully", deleted);
+        
+        Optional<UserLockout> foundUserLockout = userLockoutDao.findById(createdUserLockout.getId());
+        assertFalse("User lockout should not be found after deletion", foundUserLockout.isPresent());
     }
     
     /**
      * Test the findActiveByUserId method.
      */
-    private void testFindActiveByUserId() {
-        try {
-            // Find active lockout by user ID
-            Optional<UserLockout> userLockout = userLockoutDao.findActiveByUserId(999);
-            
-            // Verify the active lockout was found
-            boolean success = userLockout.isPresent() && 
-                              userLockout.get().getUserId() == 999 &&
-                              userLockout.get().isActive();
-            
-            printTestResult("testFindActiveByUserId", success);
-        } catch (Exception e) {
-            printTestFailure("testFindActiveByUserId", e);
-        }
+    @Test
+    public void testFindActiveByUserId() throws SQLException {
+        // Find active lockout by user ID
+        Optional<UserLockout> userLockout = userLockoutDao.findActiveByUserId(999);
+        
+        // Verify the active lockout was found
+        assertTrue("Active lockout should be found for user ID 999", userLockout.isPresent());
+        assertEquals("Found lockout user ID should be 999", Integer.valueOf(999), userLockout.get().getUserId());
+        assertTrue("Found lockout should be active", userLockout.get().isActive());
     }
     
     /**
      * Test the findByUserId method.
      */
-    private void testFindByUserId() {
-        try {
-            // Find lockouts by user ID
-            List<UserLockout> userLockouts = userLockoutDao.findByUserId(999);
-            
-            // Verify there are lockouts
-            boolean success = !userLockouts.isEmpty();
-            printTestResult("testFindByUserId", success, 
-                    "Found " + userLockouts.size() + " lockouts for user ID 999");
-        } catch (Exception e) {
-            printTestFailure("testFindByUserId", e);
+    @Test
+    public void testFindByUserId() throws SQLException {
+        // Find lockouts by user ID
+        List<UserLockout> userLockouts = userLockoutDao.findByUserId(999);
+        
+        // Verify there are lockouts
+        assertFalse("There should be lockouts for user ID 999", userLockouts.isEmpty());
+        
+        // Verify all lockouts have the correct user ID
+        for (UserLockout userLockout : userLockouts) {
+            assertEquals("Lockout user ID should be 999", Integer.valueOf(999), userLockout.getUserId());
         }
     }
     
     /**
      * Test the findAllActive method.
      */
-    private void testFindAllActive() {
-        try {
-            // Find all active lockouts
-            List<UserLockout> userLockouts = userLockoutDao.findAllActive();
-            
-            // Verify there are active lockouts
-            boolean success = !userLockouts.isEmpty();
-            printTestResult("testFindAllActive", success, 
-                    "Found " + userLockouts.size() + " active lockouts");
-        } catch (Exception e) {
-            printTestFailure("testFindAllActive", e);
+    @Test
+    public void testFindAllActive() throws SQLException {
+        // Find all active lockouts
+        List<UserLockout> userLockouts = userLockoutDao.findAllActive();
+        
+        // Verify there are active lockouts
+        assertFalse("There should be active lockouts", userLockouts.isEmpty());
+        
+        // Verify all lockouts are active
+        for (UserLockout userLockout : userLockouts) {
+            assertTrue("Lockout should be active", userLockout.isActive());
         }
     }
     
     /**
      * Test the findAllExpired method.
      */
-    private void testFindAllExpired() {
-        try {
-            // Find all expired lockouts
-            List<UserLockout> userLockouts = userLockoutDao.findAllExpired();
-            
-            // Verify there are expired lockouts
-            boolean success = !userLockouts.isEmpty();
-            printTestResult("testFindAllExpired", success, 
-                    "Found " + userLockouts.size() + " expired lockouts");
-        } catch (Exception e) {
-            printTestFailure("testFindAllExpired", e);
+    @Test
+    public void testFindAllExpired() throws SQLException {
+        // Find all expired lockouts
+        List<UserLockout> userLockouts = userLockoutDao.findAllExpired();
+        
+        // Verify there are expired lockouts
+        assertFalse("There should be expired lockouts", userLockouts.isEmpty());
+        
+        // Verify all lockouts are expired
+        for (UserLockout userLockout : userLockouts) {
+            assertTrue("Lockout should be expired", userLockout.isExpired());
         }
     }
     
     /**
      * Test the findAllPermanent method.
      */
-    private void testFindAllPermanent() {
-        try {
-            // Find all permanent lockouts
-            List<UserLockout> userLockouts = userLockoutDao.findAllPermanent();
-            
-            // Verify there are permanent lockouts
-            boolean success = !userLockouts.isEmpty();
-            printTestResult("testFindAllPermanent", success, 
-                    "Found " + userLockouts.size() + " permanent lockouts");
-        } catch (Exception e) {
-            printTestFailure("testFindAllPermanent", e);
+    @Test
+    public void testFindAllPermanent() throws SQLException {
+        // Find all permanent lockouts
+        List<UserLockout> userLockouts = userLockoutDao.findAllPermanent();
+        
+        // Verify there are permanent lockouts
+        assertFalse("There should be permanent lockouts", userLockouts.isEmpty());
+        
+        // Verify all lockouts are permanent
+        for (UserLockout userLockout : userLockouts) {
+            assertTrue("Lockout should be permanent", userLockout.isPermanent());
         }
     }
     
     /**
      * Test the findAllTemporary method.
      */
-    private void testFindAllTemporary() {
-        try {
-            // Find all temporary lockouts
-            List<UserLockout> userLockouts = userLockoutDao.findAllTemporary();
-            
-            // Verify there are temporary lockouts
-            boolean success = !userLockouts.isEmpty();
-            printTestResult("testFindAllTemporary", success, 
-                    "Found " + userLockouts.size() + " temporary lockouts");
-        } catch (Exception e) {
-            printTestFailure("testFindAllTemporary", e);
+    @Test
+    public void testFindAllTemporary() throws SQLException {
+        // Find all temporary lockouts
+        List<UserLockout> userLockouts = userLockoutDao.findAllTemporary();
+        
+        // Verify there are temporary lockouts
+        assertFalse("There should be temporary lockouts", userLockouts.isEmpty());
+        
+        // Verify all lockouts are temporary
+        for (UserLockout userLockout : userLockouts) {
+            assertFalse("Lockout should be temporary", userLockout.isPermanent());
         }
     }
     
     /**
      * Test the updateLockoutEnd method.
      */
-    private void testUpdateLockoutEnd() {
-        try {
-            // Create a new user lockout
-            UserLockout userLockout = new UserLockout();
-            userLockout.setUserId(999);
-            userLockout.setLockoutStart(OffsetDateTime.now());
-            userLockout.setLockoutEnd(OffsetDateTime.now().plusHours(1));
-            userLockout.setFailedAttempts(3);
-            userLockout.setReason("Test update lockout end");
-            
-            UserLockout createdUserLockout = userLockoutDao.create(userLockout);
-            
-            // Update the lockout end time
-            OffsetDateTime newLockoutEnd = OffsetDateTime.now().plusDays(7);
-            boolean updated = userLockoutDao.updateLockoutEnd(createdUserLockout.getId(), newLockoutEnd);
-            
-            // Verify the lockout end time was updated
-            Optional<UserLockout> updatedUserLockout = userLockoutDao.findById(createdUserLockout.getId());
-            boolean success = updated && 
-                              updatedUserLockout.isPresent() && 
-                              updatedUserLockout.get().getLockoutEnd().isAfter(OffsetDateTime.now().plusDays(6));
-            
-            printTestResult("testUpdateLockoutEnd", success);
-            
-            // Clean up
-            userLockoutDao.delete(createdUserLockout.getId());
-        } catch (Exception e) {
-            printTestFailure("testUpdateLockoutEnd", e);
-        }
+    @Test
+    public void testUpdateLockoutEnd() throws SQLException {
+        // Create a new user lockout
+        UserLockout userLockout = new UserLockout();
+        userLockout.setUserId(999);
+        userLockout.setLockoutStart(OffsetDateTime.now());
+        userLockout.setLockoutEnd(OffsetDateTime.now().plusHours(1));
+        userLockout.setFailedAttempts(3);
+        userLockout.setReason("Test update lockout end");
+        
+        UserLockout createdUserLockout = userLockoutDao.create(userLockout);
+        
+        // Update the lockout end time
+        OffsetDateTime newLockoutEnd = OffsetDateTime.now().plusDays(7);
+        boolean updated = userLockoutDao.updateLockoutEnd(createdUserLockout.getId(), newLockoutEnd);
+        
+        // Verify the lockout end time was updated
+        assertTrue("Lockout end time should be updated successfully", updated);
+        
+        Optional<UserLockout> updatedUserLockout = userLockoutDao.findById(createdUserLockout.getId());
+        assertTrue("Lockout should be found after end time update", updatedUserLockout.isPresent());
+        assertTrue("Lockout end time should be updated", 
+                   updatedUserLockout.get().getLockoutEnd().isAfter(OffsetDateTime.now().plusDays(6)));
+        
+        // Clean up
+        boolean deleted = userLockoutDao.delete(createdUserLockout.getId());
+        assertTrue("User lockout should be deleted successfully", deleted);
     }
     
     /**
      * Test the updateFailedAttempts method.
      */
-    private void testUpdateFailedAttempts() {
-        try {
-            // Create a new user lockout
-            UserLockout userLockout = new UserLockout();
-            userLockout.setUserId(999);
-            userLockout.setLockoutStart(OffsetDateTime.now());
-            userLockout.setLockoutEnd(OffsetDateTime.now().plusHours(1));
-            userLockout.setFailedAttempts(3);
-            userLockout.setReason("Test update failed attempts");
-            
-            UserLockout createdUserLockout = userLockoutDao.create(userLockout);
-            
-            // Update the failed attempts
-            boolean updated = userLockoutDao.updateFailedAttempts(createdUserLockout.getId(), 10);
-            
-            // Verify the failed attempts were updated
-            Optional<UserLockout> updatedUserLockout = userLockoutDao.findById(createdUserLockout.getId());
-            boolean success = updated && 
-                              updatedUserLockout.isPresent() && 
-                              updatedUserLockout.get().getFailedAttempts() == 10;
-            
-            printTestResult("testUpdateFailedAttempts", success);
-            
-            // Clean up
-            userLockoutDao.delete(createdUserLockout.getId());
-        } catch (Exception e) {
-            printTestFailure("testUpdateFailedAttempts", e);
-        }
+    @Test
+    public void testUpdateFailedAttempts() throws SQLException {
+        // Create a new user lockout
+        UserLockout userLockout = new UserLockout();
+        userLockout.setUserId(999);
+        userLockout.setLockoutStart(OffsetDateTime.now());
+        userLockout.setLockoutEnd(OffsetDateTime.now().plusHours(1));
+        userLockout.setFailedAttempts(3);
+        userLockout.setReason("Test update failed attempts");
+        
+        UserLockout createdUserLockout = userLockoutDao.create(userLockout);
+        
+        // Update the failed attempts
+        boolean updated = userLockoutDao.updateFailedAttempts(createdUserLockout.getId(), 10);
+        
+        // Verify the failed attempts were updated
+        assertTrue("Failed attempts should be updated successfully", updated);
+        
+        Optional<UserLockout> updatedUserLockout = userLockoutDao.findById(createdUserLockout.getId());
+        assertTrue("Lockout should be found after failed attempts update", updatedUserLockout.isPresent());
+        assertEquals("Lockout failed attempts should be updated", Integer.valueOf(10), updatedUserLockout.get().getFailedAttempts());
+        
+        // Clean up
+        boolean deleted = userLockoutDao.delete(createdUserLockout.getId());
+        assertTrue("User lockout should be deleted successfully", deleted);
     }
     
     /**
      * Test the deleteExpired method.
      */
-    private void testDeleteExpired() {
-        try {
-            // Delete expired lockouts
-            int deleted = userLockoutDao.deleteExpired();
-            
-            // Verify expired lockouts were deleted
-            boolean success = deleted > 0;
-            printTestResult("testDeleteExpired", success, "Deleted " + deleted + " expired lockouts");
-        } catch (Exception e) {
-            printTestFailure("testDeleteExpired", e);
-        }
+    @Test
+    public void testDeleteExpired() throws SQLException {
+        // Delete expired lockouts
+        int deleted = userLockoutDao.deleteExpired();
+        
+        // Verify expired lockouts were deleted
+        assertTrue("At least one expired lockout should be deleted", deleted > 0);
+        
+        // Verify no expired lockouts remain
+        List<UserLockout> expiredLockouts = userLockoutDao.findAllExpired();
+        assertTrue("No expired lockouts should remain", expiredLockouts.isEmpty());
     }
     
     /**
      * Test the deleteByUserId method.
      */
-    private void testDeleteByUserId() {
-        try {
-            // Create a new user lockout for a different user
-            UserLockout userLockout = new UserLockout();
-            userLockout.setUserId(998);
-            userLockout.setLockoutStart(OffsetDateTime.now());
-            userLockout.setLockoutEnd(OffsetDateTime.now().plusHours(1));
-            userLockout.setFailedAttempts(3);
-            userLockout.setReason("Test delete by user ID");
-            
-            UserLockout createdUserLockout = userLockoutDao.create(userLockout);
-            
-            // Delete lockouts by user ID
-            int deleted = userLockoutDao.deleteByUserId(998);
-            
-            // Verify lockouts were deleted
-            boolean success = deleted > 0 && !userLockoutDao.findById(createdUserLockout.getId()).isPresent();
-            
-            printTestResult("testDeleteByUserId", success, "Deleted " + deleted + " lockouts for user ID 998");
-        } catch (Exception e) {
-            printTestFailure("testDeleteByUserId", e);
-        }
+    @Test
+    public void testDeleteByUserId() throws SQLException {
+        // Create a new user lockout for a different user
+        UserLockout userLockout = new UserLockout();
+        userLockout.setUserId(998);
+        userLockout.setLockoutStart(OffsetDateTime.now());
+        userLockout.setLockoutEnd(OffsetDateTime.now().plusHours(1));
+        userLockout.setFailedAttempts(3);
+        userLockout.setReason("Test delete by user ID");
+        
+        UserLockout createdUserLockout = userLockoutDao.create(userLockout);
+        
+        // Delete lockouts by user ID
+        int deleted = userLockoutDao.deleteByUserId(998);
+        
+        // Verify lockouts were deleted
+        assertTrue("At least one lockout should be deleted", deleted > 0);
+        
+        Optional<UserLockout> foundUserLockout = userLockoutDao.findById(createdUserLockout.getId());
+        assertFalse("Lockout should not be found after deletion", foundUserLockout.isPresent());
     }
 }
