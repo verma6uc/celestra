@@ -46,7 +46,7 @@
   - **Why**: Understanding the required features is essential before implementing data access objects.
   - **What**: Read and analyze the documents in `/Users/nupurbhaisare/celestra-workspace/celestra/docs/features` to understand what operations each DAO needs to support.
 
-- [ ] **Create DAO (Data Access Object) classes for each POJO**
+- [x] **Create DAO (Data Access Object) classes for each POJO**
   - **Why**: DAOs separate business logic from database access code, providing a clean API for database operations.
   - **What**: For each POJO, create a corresponding DAO class that:
     - Implements CRUD operations (Create, Read, Update, Delete)
