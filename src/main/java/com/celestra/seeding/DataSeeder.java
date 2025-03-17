@@ -1,6 +1,10 @@
 package com.celestra.seeding;
 
 import com.celestra.db.DatabaseUtil;
+import com.celestra.dao.AgentDao;
+import com.celestra.dao.KnowledgeBaseDao;
+import com.celestra.dao.impl.AgentDaoImpl;
+import com.celestra.dao.impl.KnowledgeBaseDaoImpl;
 import com.celestra.seeding.seeders.CompanySeeder;
 import com.celestra.seeding.seeders.KnowledgeTypeSeeder;
 import com.celestra.seeding.seeders.AuditChangeLogSeeder;
@@ -287,7 +291,10 @@ public class DataSeeder {
     private static void seedAgentKnowledgeBases(Connection connection) throws SQLException {
         LOGGER.info("Seeding agent_knowledge_bases table...");
         
-        AgentKnowledgeBaseSeeder agentKnowledgeBaseSeeder = new AgentKnowledgeBaseSeeder(connection, NUM_AGENT_KNOWLEDGE_BASES);
+        AgentDao agentDao = new AgentDaoImpl();
+        KnowledgeBaseDao knowledgeBaseDao = new KnowledgeBaseDaoImpl();
+        
+        AgentKnowledgeBaseSeeder agentKnowledgeBaseSeeder = new AgentKnowledgeBaseSeeder(connection, NUM_AGENT_KNOWLEDGE_BASES, agentDao, knowledgeBaseDao);
         agentKnowledgeBaseIds = agentKnowledgeBaseSeeder.seed();
         
         LOGGER.info("Seeded " + agentKnowledgeBaseIds.size() + " agent knowledge base relationships.");

@@ -1,6 +1,8 @@
 package com.celestra.seeding.seeders;
 
 import com.celestra.dao.AgentKnowledgeBaseDao;
+import com.celestra.dao.AgentDao;
+import com.celestra.dao.KnowledgeBaseDao;
 import com.celestra.dao.impl.AgentKnowledgeBaseDaoImpl;
 import com.celestra.model.AgentKnowledgeBase;
 import com.celestra.seeding.util.TimestampUtil;
@@ -26,15 +28,13 @@ public class AgentKnowledgeBaseSeeder {
     
     private static final Logger LOGGER = Logger.getLogger(AgentKnowledgeBaseSeeder.class.getName());
     
-    private static final String GET_AGENTS_BY_COMPANY_SQL = 
-            "SELECT id, company_id FROM agents";
-    
-    private static final String GET_KNOWLEDGE_BASES_BY_COMPANY_SQL = 
-            "SELECT id, company_id FROM knowledge_bases";
-    
     private final Connection connection;
     private final AgentKnowledgeBaseDao agentKnowledgeBaseDao;
     private final int numAgentKnowledgeBases;
+    private final AgentDao agentDao;
+    private final KnowledgeBaseDao knowledgeBaseDao;
+    
+    private List<Integer> companyIds;
     
     /**
      * Constructor for AgentKnowledgeBaseSeeder.
@@ -42,9 +42,11 @@ public class AgentKnowledgeBaseSeeder {
      * @param connection Database connection
      * @param numAgentKnowledgeBases Number of agent-knowledge base relationships to seed
      */
-    public AgentKnowledgeBaseSeeder(Connection connection, int numAgentKnowledgeBases) {
+    public AgentKnowledgeBaseSeeder(Connection connection, int numAgentKnowledgeBases, AgentDao agentDao, KnowledgeBaseDao knowledgeBaseDao) {
         this.connection = connection;
         this.agentKnowledgeBaseDao = new AgentKnowledgeBaseDaoImpl();
+        this.agentDao = agentDao;
+        this.knowledgeBaseDao = knowledgeBaseDao;
         this.numAgentKnowledgeBases = numAgentKnowledgeBases;
     }
     
@@ -57,11 +59,14 @@ public class AgentKnowledgeBaseSeeder {
     public List<Integer> seed() throws SQLException {
         LOGGER.info("Seeding agent_knowledge_bases table with " + numAgentKnowledgeBases + " records...");
         
-        // Get agents grouped by company
-        Map<Integer, List<Integer>> agentsByCompany = getAgentsByCompany();
+        // Get all companies with agents
+        companyIds = getCompanyIds();
         
-        // Get knowledge bases grouped by company
-        Map<Integer, List<Integer>> knowledgeBasesByCompany = getKnowledgeBasesByCompany();
+        // Get agents and knowledge bases grouped by company
+        Map<Integer, List<Integer>> agentsByCompany = new HashMap<>();
+        Map<Integer, List<Integer>> knowledgeBasesByCompany = new HashMap<>();
+        
+        populateAgentsAndKnowledgeBases(agentsByCompany, knowledgeBasesByCompany);
         
         // Check if we have data to work with
         if (agentsByCompany.isEmpty() || knowledgeBasesByCompany.isEmpty()) {
@@ -106,6 +111,11 @@ public class AgentKnowledgeBaseSeeder {
                         // Mark this relationship as existing
                         existingRelationships.put(relationshipKey, true);
                         
+                        // Check if this relationship already exists in the database using the DAO
+                        if (agentKnowledgeBaseDao.existsByAgentIdAndKnowledgeBaseId(agentId, knowledgeBaseId)) {
+                            continue;
+                        }
+                        
                         // Generate timestamp
                         Timestamp createdAt = TimestampUtil.getRandomTimestampInRange(-365, -1);
                         
@@ -149,48 +159,50 @@ public class AgentKnowledgeBaseSeeder {
     }
     
     /**
-     * Get agents grouped by company.
+     * Get all company IDs that have agents.
      * 
-     * @return Map of company IDs to lists of agent IDs
+     * @return List of company IDs
      * @throws SQLException If a database error occurs
      */
-    private Map<Integer, List<Integer>> getAgentsByCompany() throws SQLException {
-        Map<Integer, List<Integer>> agentsByCompany = new HashMap<>();
+    private List<Integer> getCompanyIds() throws SQLException {
+        String sql = "SELECT DISTINCT company_id FROM agents";
+        List<Integer> companyIds = new ArrayList<>();
         
-        try (PreparedStatement statement = connection.prepareStatement(GET_AGENTS_BY_COMPANY_SQL);
-             ResultSet resultSet = statement.executeQuery()) {
-            
-            while (resultSet.next()) {
-                int agentId = resultSet.getInt("id");
-                int companyId = resultSet.getInt("company_id");
-                
-                agentsByCompany.computeIfAbsent(companyId, k -> new ArrayList<>()).add(agentId);
-            }
+        try (PreparedStatement statement = connection.prepareStatement(sql);
+            ResultSet resultSet = statement.executeQuery()) {
+           while (resultSet.next()) {
+               companyIds.add(resultSet.getInt("company_id"));
+           }
         }
         
-        return agentsByCompany;
+        return companyIds;
     }
     
     /**
-     * Get knowledge bases grouped by company.
+     * Populate agents and knowledge bases by company.
      * 
-     * @return Map of company IDs to lists of knowledge base IDs
+     * @param agentsByCompany Map to populate with agents by company
+     * @param knowledgeBasesByCompany Map to populate with knowledge bases by company
      * @throws SQLException If a database error occurs
      */
-    private Map<Integer, List<Integer>> getKnowledgeBasesByCompany() throws SQLException {
-        Map<Integer, List<Integer>> knowledgeBasesByCompany = new HashMap<>();
+    private void populateAgentsAndKnowledgeBases(
+            Map<Integer, List<Integer>> agentsByCompany,
+            Map<Integer, List<Integer>> knowledgeBasesByCompany) throws SQLException {
         
-        try (PreparedStatement statement = connection.prepareStatement(GET_KNOWLEDGE_BASES_BY_COMPANY_SQL);
-             ResultSet resultSet = statement.executeQuery()) {
-            
-            while (resultSet.next()) {
-                int knowledgeBaseId = resultSet.getInt("id");
-                int companyId = resultSet.getInt("company_id");
-                
-                knowledgeBasesByCompany.computeIfAbsent(companyId, k -> new ArrayList<>()).add(knowledgeBaseId);
+        for (Integer companyId : companyIds) {
+            // Get agents for this company using the DAO
+            List<Integer> agentIds = new ArrayList<>();
+            for (com.celestra.model.Agent agent : agentDao.findByCompanyId(companyId)) {
+                agentIds.add(agent.getId());
             }
+            agentsByCompany.put(companyId, agentIds);
+            
+            // Get knowledge bases for this company using the DAO
+            List<Integer> knowledgeBaseIds = new ArrayList<>();
+            for (com.celestra.model.KnowledgeBase kb : knowledgeBaseDao.findByCompanyId(companyId)) {
+                knowledgeBaseIds.add(kb.getId());
+            }
+            knowledgeBasesByCompany.put(companyId, knowledgeBaseIds);
         }
-        
-        return knowledgeBasesByCompany;
     }
 }
