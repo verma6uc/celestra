@@ -20,18 +20,22 @@ import com.celestra.auth.util.EmailUtil;
 import com.celestra.auth.util.PasswordUtil;
 import com.celestra.dao.AuditLogDao;
 import com.celestra.dao.FailedLoginDao;
+import com.celestra.dao.CompanyDao;
 import com.celestra.dao.UserDao;
 import com.celestra.dao.UserLockoutDao;
 import com.celestra.dao.UserSessionDao;
 import com.celestra.dao.impl.AuditLogDaoImpl;
 import com.celestra.dao.impl.FailedLoginDaoImpl;
+import com.celestra.dao.impl.CompanyDaoImpl;
 import com.celestra.dao.impl.UserDaoImpl;
 import com.celestra.dao.impl.UserLockoutDaoImpl;
 import com.celestra.dao.impl.UserSessionDaoImpl;
 import com.celestra.db.TransactionUtil;
 import com.celestra.enums.AuditEventType;
+import com.celestra.enums.CompanyStatus;
 import com.celestra.enums.UserStatus;
 import com.celestra.model.AuditLog;
+import com.celestra.model.Company;
 import com.celestra.model.FailedLogin;
 import com.celestra.model.User;
 import com.celestra.model.UserLockout;
@@ -45,12 +49,13 @@ public class LoginServiceImpl implements LoginService {
     private static final Logger LOGGER = Logger.getLogger(LoginServiceImpl.class.getName());
     private static final SecureRandom RANDOM = new SecureRandom();
     
-    private final UserDao userDao;
-    private final UserSessionDao userSessionDao;
-    private final FailedLoginDao failedLoginDao;
-    private final UserLockoutDao userLockoutDao;
-    private final AuditLogDao auditLogDao;
-    private final AuthConfigProvider config;
+    protected final UserDao userDao;
+    protected final UserSessionDao userSessionDao;
+    protected final FailedLoginDao failedLoginDao;
+    protected final UserLockoutDao userLockoutDao;
+    protected final CompanyDao companyDao;
+    protected final AuditLogDao auditLogDao;
+    protected final AuthConfigProvider config;
     
     /**
      * Default constructor.
@@ -58,18 +63,21 @@ public class LoginServiceImpl implements LoginService {
      */
     public LoginServiceImpl() {
         this(new UserDaoImpl(), new UserSessionDaoImpl(), new FailedLoginDaoImpl(), 
-             new UserLockoutDaoImpl(), new AuditLogDaoImpl(), AuthConfigurationManager.getInstance());
+             new UserLockoutDaoImpl(), new CompanyDaoImpl(), new AuditLogDaoImpl(), 
+             AuthConfigurationManager.getInstance());
     }
     
     /**
      * Parameterized constructor for dependency injection.
      */
     public LoginServiceImpl(UserDao userDao, UserSessionDao userSessionDao, FailedLoginDao failedLoginDao,
-                           UserLockoutDao userLockoutDao, AuditLogDao auditLogDao, AuthConfigProvider config) {
+                           UserLockoutDao userLockoutDao, CompanyDao companyDao, AuditLogDao auditLogDao, 
+                           AuthConfigProvider config) {
         this.userDao = userDao;
         this.userSessionDao = userSessionDao;
         this.failedLoginDao = failedLoginDao;
         this.userLockoutDao = userLockoutDao;
+        this.companyDao = companyDao;
         this.auditLogDao = auditLogDao;
         this.config = config;
     }
@@ -113,6 +121,22 @@ public class LoginServiceImpl implements LoginService {
             recordFailedLogin(email, ipAddress, "Account is not active", metadata);
             createAuditLog(user.getId(), AuditEventType.FAILED_LOGIN, "Login attempt on inactive account", ipAddress, "users", user.getId().toString(), null);
             return Optional.empty();
+        }
+        
+        // If the user is not a super admin, check if their company is active
+        if (!user.isSuperAdmin() && user.getCompanyId() != null) {
+            Optional<Company> companyOpt = companyDao.findById(user.getCompanyId());
+            
+            // If company doesn't exist or is not active, deny login
+            if (!companyOpt.isPresent() || companyOpt.get().getStatus() != CompanyStatus.ACTIVE) {
+                String reason = !companyOpt.isPresent() ? 
+                    "Company not found" : 
+                    "Company is not active";
+                
+                recordFailedLogin(email, ipAddress, reason, metadata);
+                createAuditLog(user.getId(), AuditEventType.FAILED_LOGIN, "Login attempt with inactive company", ipAddress, "users", user.getId().toString(), null);
+                return Optional.empty();
+            }
         }
         
         // Verify the password
@@ -197,6 +221,22 @@ public class LoginServiceImpl implements LoginService {
         Optional<User> userOpt = userDao.findById(session.getUserId());
         if (!userOpt.isPresent() || userOpt.get().getStatus() != UserStatus.ACTIVE) {
             return Optional.empty();
+        }
+
+        User user = userOpt.get();
+        
+        // If the user is not a super admin, check if their company is active
+        if (!user.isSuperAdmin() && user.getCompanyId() != null) {
+            Optional<Company> companyOpt = companyDao.findById(user.getCompanyId());
+            
+            // If company doesn't exist or is not active, invalidate session
+            if (!companyOpt.isPresent() || companyOpt.get().getStatus() != CompanyStatus.ACTIVE) {
+                // End the session
+                endSession(sessionToken, "Company is not active");
+                
+                // Return empty to indicate invalid session
+                return Optional.empty();
+            }
         }
         
         // Session is valid
@@ -332,7 +372,7 @@ public class LoginServiceImpl implements LoginService {
      * @param ipAddress The IP address that triggered the lockout
      * @throws SQLException if a database error occurs
      */
-    private void lockAccount(Integer userId, int failedAttempts, String reason, String ipAddress) throws SQLException {
+    protected void lockAccount(Integer userId, int failedAttempts, String reason, String ipAddress) throws SQLException {
         // Create the lockout record
         UserLockout lockout = new UserLockout();
         lockout.setUserId(userId);
@@ -365,7 +405,7 @@ public class LoginServiceImpl implements LoginService {
     /**
      * Create an audit log entry.
      */
-    private void createAuditLog(Integer userId, AuditEventType eventType, String eventDescription, 
+    protected void createAuditLog(Integer userId, AuditEventType eventType, String eventDescription, 
                                String ipAddress, String tableName, String recordId, String reason) {
         try {
             AuditLog auditLog = new AuditLog(eventType);

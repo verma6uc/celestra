@@ -402,7 +402,6 @@ COMMENT ON COLUMN public.audit_logs.record_id IS 'Identifier of the specific dat
 COMMENT ON COLUMN public.audit_logs.group_id IS 'UUID to group related audit events from a single logical operation';
 COMMENT ON COLUMN public.audit_logs.created_at IS 'Timestamp when security event occurred';
 
-
 -- public.failed_logins definition
 
 -- Drop table
@@ -415,9 +414,11 @@ CREATE TABLE public.failed_logins (
 	ip_address varchar(45) NULL, -- IP address where login attempt originated
 	attempted_at timestamptz(6) DEFAULT now() NULL, -- Timestamp when login attempt occurred
 	failure_reason varchar(255) NULL, -- Description of why authentication failed
+	email varchar(255) NULL, -- Email address used in the login attempt (especially when user_id is unknown)
 	CONSTRAINT failed_logins_pkey PRIMARY KEY (id),
 	CONSTRAINT failed_logins_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
+CREATE INDEX idx_failed_logins_email ON public.failed_logins USING btree (email);
 COMMENT ON TABLE public.failed_logins IS 'Records unsuccessful authentication attempts';
 
 -- Column comments
@@ -427,7 +428,7 @@ COMMENT ON COLUMN public.failed_logins.user_id IS 'Foreign key to user account (
 COMMENT ON COLUMN public.failed_logins.ip_address IS 'IP address where login attempt originated';
 COMMENT ON COLUMN public.failed_logins.attempted_at IS 'Timestamp when login attempt occurred';
 COMMENT ON COLUMN public.failed_logins.failure_reason IS 'Description of why authentication failed';
-
+COMMENT ON COLUMN public.failed_logins.email IS 'Email address used in the login attempt (especially when user_id is unknown)';
 
 -- public.invitations definition
 
