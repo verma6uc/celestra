@@ -52,6 +52,8 @@ public class KnowledgeTypeDaoImplTest extends BaseDaoTest {
     
     @Override
     protected void cleanupTestData() throws SQLException {
+        // First delete any knowledge sources that reference the knowledge types we want to delete
+        executeSQL("DELETE FROM knowledge_sources WHERE knowledge_type_id IN (SELECT id FROM knowledge_types WHERE name LIKE 'Test%' OR name IN ('Document', 'Database', 'API'))");
         executeSQL("DELETE FROM knowledge_types WHERE name LIKE 'Test%' OR name IN ('Document', 'Database', 'API')");
     }
     
