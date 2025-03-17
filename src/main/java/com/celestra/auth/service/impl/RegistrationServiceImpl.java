@@ -19,14 +19,21 @@ import com.celestra.auth.config.AuthConfigurationManager;
 import com.celestra.auth.service.RegistrationService;
 import com.celestra.auth.util.EmailUtil;
 import com.celestra.auth.util.PasswordUtil;
+import com.celestra.dao.AuditLogDao;
 import com.celestra.dao.InvitationDao;
 import com.celestra.dao.UserDao;
+import com.celestra.dao.impl.AuditLogDaoImpl;
 import com.celestra.dao.impl.InvitationDaoImpl;
 import com.celestra.dao.impl.UserDaoImpl;
 import com.celestra.db.TransactionUtil;
+import com.celestra.email.EmailService;
+import com.celestra.email.JavaMailEmailService;
+import com.celestra.email.exception.EmailException;
+import com.celestra.enums.AuditEventType;
 import com.celestra.enums.InvitationStatus;
 import com.celestra.enums.UserRole;
 import com.celestra.enums.UserStatus;
+import com.celestra.model.AuditLog;
 import com.celestra.model.Invitation;
 import com.celestra.model.User;
 
@@ -41,6 +48,8 @@ public class RegistrationServiceImpl implements RegistrationService {
     private final UserDao userDao;
     private final InvitationDao invitationDao;
     private final AuthConfigProvider config;
+    private final EmailService emailService;
+    private final AuditLogDao auditLogDao;
     
     /**
      * Default constructor.
@@ -51,16 +60,22 @@ public class RegistrationServiceImpl implements RegistrationService {
     }
     
     /**
-     * Parameterized constructor for dependency injection.
-     * 
-     * @param userDao The UserDao implementation to use
-     * @param invitationDao The InvitationDao implementation to use
-     * @param config The AuthConfigProvider implementation to use
+     * Constructor with DAOs but default services.
      */
     public RegistrationServiceImpl(UserDao userDao, InvitationDao invitationDao, AuthConfigProvider config) {
+        this(userDao, invitationDao, config, new JavaMailEmailService(), new AuditLogDaoImpl());
+    }
+    
+    /**
+     * Parameterized constructor for dependency injection.
+     */
+    public RegistrationServiceImpl(UserDao userDao, InvitationDao invitationDao, AuthConfigProvider config, 
+                                  EmailService emailService, AuditLogDao auditLogDao) {
         this.userDao = userDao;
         this.invitationDao = invitationDao;
         this.config = config;
+        this.emailService = emailService;
+        this.auditLogDao = auditLogDao;
     }
     
     @Override
@@ -166,9 +181,13 @@ public class RegistrationServiceImpl implements RegistrationService {
                     generateEmailVerificationInvitation(newUser);
                 }
                 
-                // TODO: Create audit log entry for account creation
+                // Create audit log entry for account creation
+                createAuditLog(newUser.getId(), AuditEventType.OTHER, "User account created", ipAddress, "users", newUser.getId().toString(), null);
             });
             createdUser = userDao.findByEmail(email).orElseThrow(() -> new SQLException("User creation failed"));
+            
+            // Send welcome email
+            sendWelcomeEmail(createdUser, password);
         } catch (Exception e) {
             throw new SQLException("Error creating user: " + e.getMessage(), e);
         }
@@ -266,9 +285,13 @@ public class RegistrationServiceImpl implements RegistrationService {
                 finalInvitation.setStatus(InvitationStatus.ACCEPTED);
                 invitationDao.update(finalInvitation);
                 
-                // TODO: Create audit log entry for account activation
+                // Create audit log entry for account activation
+                createAuditLog(finalUser.getId(), AuditEventType.OTHER, "User account activated via invitation", ipAddress, "users", finalUser.getId().toString(), null);
             });
             updatedUser = userDao.findById(user.getId()).orElseThrow(() -> new SQLException("User update failed"));
+            
+            // Send account activation email
+            sendAccountActivationEmail(updatedUser);
         } catch (Exception e) {
             throw new SQLException("Error updating user: " + e.getMessage(), e);
         }
@@ -364,14 +387,128 @@ public class RegistrationServiceImpl implements RegistrationService {
                 finalInvitation.setStatus(InvitationStatus.ACCEPTED);
                 invitationDao.update(finalInvitation);
                 
-                // TODO: Create audit log entry for email verification
+                // Create audit log entry for email verification
+                createAuditLog(finalUser.getId(), AuditEventType.OTHER, "Email verified", null, "users", finalUser.getId().toString(), null);
             });
             success = true;
+            
+            // Send email verification confirmation
+            sendEmailVerificationConfirmationEmail(user);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error verifying email: " + e.getMessage(), e);
             success = false;
         }
         return success;
+    }
+    
+    /**
+     * Send a welcome email to a newly registered user.
+     * 
+     * @param user The user to send the email to
+     * @param password The user's plain text password (only included if self-registration)
+     */
+    private void sendWelcomeEmail(User user, String password) {
+        try {
+            String subject = "Welcome to Celestra";
+            
+            StringBuilder bodyBuilder = new StringBuilder();
+            bodyBuilder.append("Dear ").append(user.getName()).append(",\n\n");
+            bodyBuilder.append("Welcome to Celestra! Your account has been created successfully.\n\n");
+            
+            if (config.isEmailVerificationRequired()) {
+                bodyBuilder.append("Please verify your email address by clicking on the verification link that has been sent to you in a separate email.\n\n");
+            }
+            
+            if (password != null) {
+                bodyBuilder.append("Your account details:\n");
+                bodyBuilder.append("Email: ").append(user.getEmail()).append("\n");
+                bodyBuilder.append("Password: ").append(password).append("\n\n");
+                bodyBuilder.append("Please change your password after your first login for security reasons.\n\n");
+            }
+            
+            bodyBuilder.append("If you have any questions, please contact our support team.\n\n");
+            bodyBuilder.append("Best regards,\n");
+            bodyBuilder.append("The Celestra Team");
+            
+            emailService.sendPlainTextEmail(user.getEmail(), subject, bodyBuilder.toString());
+            
+            LOGGER.info("Welcome email sent to " + user.getEmail());
+        } catch (EmailException e) {
+            LOGGER.log(Level.SEVERE, "Error sending welcome email to " + user.getEmail(), e);
+        }
+    }
+    
+    /**
+     * Send an account activation email to a user who has activated their account via invitation.
+     * 
+     * @param user The user to send the email to
+     */
+    private void sendAccountActivationEmail(User user) {
+        try {
+            String subject = "Celestra Account Activated";
+            
+            StringBuilder bodyBuilder = new StringBuilder();
+            bodyBuilder.append("Dear ").append(user.getName()).append(",\n\n");
+            bodyBuilder.append("Your Celestra account has been successfully activated.\n\n");
+            bodyBuilder.append("You can now log in to the system using your email address and the password you provided.\n\n");
+            bodyBuilder.append("If you have any questions, please contact our support team.\n\n");
+            bodyBuilder.append("Best regards,\n");
+            bodyBuilder.append("The Celestra Team");
+            
+            emailService.sendPlainTextEmail(user.getEmail(), subject, bodyBuilder.toString());
+            
+            LOGGER.info("Account activation email sent to " + user.getEmail());
+        } catch (EmailException e) {
+            LOGGER.log(Level.SEVERE, "Error sending account activation email to " + user.getEmail(), e);
+        }
+    }
+    
+    /**
+     * Send an email verification confirmation email to a user who has verified their email.
+     * 
+     * @param user The user to send the email to
+     */
+    private void sendEmailVerificationConfirmationEmail(User user) {
+        try {
+            String subject = "Celestra Email Verification Successful";
+            
+            StringBuilder bodyBuilder = new StringBuilder();
+            bodyBuilder.append("Dear ").append(user.getName()).append(",\n\n");
+            bodyBuilder.append("Your email address has been successfully verified.\n\n");
+            bodyBuilder.append("You can now use all features of the Celestra platform.\n\n");
+            bodyBuilder.append("If you have any questions, please contact our support team.\n\n");
+            bodyBuilder.append("Best regards,\n");
+            bodyBuilder.append("The Celestra Team");
+            
+            emailService.sendPlainTextEmail(user.getEmail(), subject, bodyBuilder.toString());
+            
+            LOGGER.info("Email verification confirmation sent to " + user.getEmail());
+        } catch (EmailException e) {
+            LOGGER.log(Level.SEVERE, "Error sending email verification confirmation to " + user.getEmail(), e);
+        }
+    }
+    
+    /**
+     * Create an audit log entry.
+     */
+    private void createAuditLog(Integer userId, AuditEventType eventType, String eventDescription, 
+                               String ipAddress, String tableName, String recordId, String reason) {
+        try {
+            AuditLog auditLog = new AuditLog(eventType);
+            auditLog.setUserId(userId);
+            auditLog.setEventDescription(eventDescription);
+            auditLog.setIpAddress(ipAddress);
+            auditLog.setTableName(tableName);
+            auditLog.setRecordId(recordId);
+            auditLog.setReason(reason);
+            auditLog.setCreatedAt(new Timestamp(System.currentTimeMillis()));
+            
+            auditLogDao.create(auditLog);
+            
+            LOGGER.info("Audit log created: " + eventDescription);
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error creating audit log: " + eventDescription, e);
+        }
     }
 
     /**

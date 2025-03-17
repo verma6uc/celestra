@@ -18,11 +18,16 @@ import org.mockito.MockitoAnnotations;
 
 import com.celestra.auth.config.AuthConfigProvider;
 import com.celestra.auth.service.RegistrationService;
+import com.celestra.dao.AuditLogDao;
 import com.celestra.dao.InvitationDao;
 import com.celestra.dao.UserDao;
+import com.celestra.email.EmailService;
+import com.celestra.email.exception.EmailException;
+import com.celestra.enums.AuditEventType;
 import com.celestra.enums.InvitationStatus;
 import com.celestra.enums.UserRole;
 import com.celestra.enums.UserStatus;
+import com.celestra.model.AuditLog;
 import com.celestra.model.Invitation;
 import com.celestra.model.User;
 
@@ -40,12 +45,18 @@ public class RegistrationServiceImplTest {
     @Mock
     private AuthConfigProvider config;
     
+    @Mock
+    private EmailService emailService;
+    
+    @Mock
+    private AuditLogDao auditLogDao;
+    
     private RegistrationService registrationService;
     
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
-        registrationService = new RegistrationServiceImpl(userDao, invitationDao, config);
+        registrationService = new RegistrationServiceImpl(userDao, invitationDao, config, emailService, auditLogDao);
         
         // Configure default behavior for config
         when(config.getPasswordMinLength()).thenReturn(8);
@@ -61,7 +72,7 @@ public class RegistrationServiceImplTest {
     }
     
     @Test
-    public void testRegisterUser_Success() throws SQLException {
+    public void testRegisterUser_Success() throws SQLException, EmailException {
         // Arrange
         String email = "nupur.bhaisare@leucinetech.com";
         String name = "Test User";
@@ -97,11 +108,12 @@ public class RegistrationServiceImplTest {
         verify(userDao, times(2)).findByEmail(email);
         verify(userDao).create(any(User.class));
         verify(userDao).addPasswordToHistory(eq(1), anyString());
-        verify(userDao, times(2)).findByEmail(email);
+        verify(auditLogDao).create(any(AuditLog.class));
+        verify(emailService).sendPlainTextEmail(eq(email), anyString(), anyString());
     }
     
     @Test
-    public void testRegisterUser_WithEmailVerification() throws SQLException {
+    public void testRegisterUser_WithEmailVerification() throws SQLException, EmailException {
         // Arrange
         String email = "nupur.bhaisare@leucinetech.com";
         String name = "Test User";
@@ -139,7 +151,8 @@ public class RegistrationServiceImplTest {
         verify(userDao).create(any(User.class));
         verify(userDao).addPasswordToHistory(eq(1), anyString());
         verify(invitationDao).create(any(Invitation.class));
-        verify(userDao, times(2)).findByEmail(email);
+        verify(auditLogDao).create(any(AuditLog.class));
+        verify(emailService).sendPlainTextEmail(eq(email), anyString(), anyString());
     }
     
     @Test
@@ -169,6 +182,8 @@ public class RegistrationServiceImplTest {
         // Verify interactions
         verify(userDao).findByEmail(email);
         verify(userDao, never()).create(any(User.class));
+        verify(auditLogDao, never()).create(any(AuditLog.class));
+        verifyNoInteractions(emailService);
     }
     
     @Test
@@ -194,6 +209,8 @@ public class RegistrationServiceImplTest {
         // Verify interactions
         verify(userDao).findByEmail(email);
         verify(userDao, never()).create(any(User.class));
+        verify(auditLogDao, never()).create(any(AuditLog.class));
+        verifyNoInteractions(emailService);
     }
     
     @Test
@@ -233,6 +250,8 @@ public class RegistrationServiceImplTest {
         verify(userDao).update(any(User.class));
         verify(userDao).addPasswordToHistory(eq(1), anyString());
         verify(invitationDao).update(any(Invitation.class));
+        verify(auditLogDao).create(any(AuditLog.class));
+        verify(emailService).sendPlainTextEmail(eq("nupur.bhaisare@leucinetech.com"), anyString(), anyString());
         
         // Verify user was updated correctly
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
@@ -277,10 +296,12 @@ public class RegistrationServiceImplTest {
         verify(invitationDao).findByToken(token);
         verify(userDao, never()).findById(anyInt());
         verify(userDao, never()).update(any(User.class));
+        verify(auditLogDao, never()).create(any(AuditLog.class));
+        verifyNoInteractions(emailService);
     }
     
     @Test
-    public void testVerifyEmail_Success() throws SQLException {
+    public void testVerifyEmail_Success() throws SQLException, EmailException {
         // Arrange
         String token = "valid-token";
         
@@ -310,6 +331,8 @@ public class RegistrationServiceImplTest {
         verify(userDao).findById(1);
         verify(userDao).update(any(User.class));
         verify(invitationDao).update(any(Invitation.class));
+        verify(auditLogDao).create(any(AuditLog.class));
+        verify(emailService).sendPlainTextEmail(eq("nupur.bhaisare@leucinetech.com"), anyString(), anyString());
         
         // Verify user was updated correctly
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
@@ -342,6 +365,8 @@ public class RegistrationServiceImplTest {
         verify(userDao, never()).findById(anyInt());
         verify(userDao, never()).update(any(User.class));
         verify(invitationDao, never()).update(any(Invitation.class));
+        verify(auditLogDao, never()).create(any(AuditLog.class));
+        verifyNoInteractions(emailService);
     }
     
     @Test
