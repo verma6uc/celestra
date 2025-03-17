@@ -60,13 +60,13 @@ public class AuditChangeLogDaoImplTest extends BaseDaoTest {
         
         // Insert test audit change logs
         executeSQL("INSERT INTO audit_change_logs (id, audit_log_id, column_name, old_value, new_value, created_at) " +
-                   "VALUES (nextval('audit_change_logs_id_seq'), 1, 'name', 'Old Company Name', 'New Company Name', NOW())");
+                   "VALUES (nextval('audit_change_logs_id_seq'), (SELECT id FROM audit_logs WHERE event_description = 'Updated company settings'), 'name', 'Old Company Name', 'New Company Name', NOW())");
         
         executeSQL("INSERT INTO audit_change_logs (id, audit_log_id, column_name, old_value, new_value, created_at) " +
-                   "VALUES (nextval('audit_change_logs_id_seq'), 1, 'description', 'Old Description', 'New Description', NOW())");
+                   "VALUES (nextval('audit_change_logs_id_seq'), (SELECT id FROM audit_logs WHERE event_description = 'Updated company settings'), 'description', 'Old Description', 'New Description', NOW())");
         
         executeSQL("INSERT INTO audit_change_logs (id, audit_log_id, column_name, old_value, new_value, created_at) " +
-                   "VALUES (nextval('audit_change_logs_id_seq'), 2, 'email', 'old@test.com', 'new@test.com', NOW())");
+                   "VALUES (nextval('audit_change_logs_id_seq'), (SELECT id FROM audit_logs WHERE event_description = 'Exported user data'), 'email', 'old@test.com', 'new@test.com', NOW())");
     }
     
     @Override
