@@ -1,18 +1,8 @@
 # Authentication Module Implementation Tasks
 
-## Completed Tasks
-
-- [x] **Add Email Tracking to Failed Login Attempts**
-  - **Why**: Tracking email addresses for failed login attempts improves security monitoring, especially when a user ID is not available.
-  - **What**: Implemented changes to:
-    - Updated the database schema to add an email column to the failed_logins table
-    - Modified the FailedLogin model to include the email field
-    - Updated the FailedLoginDao interface and implementation to support finding and counting by email
-    - Updated the data seeder to populate the email field for failed login records
-
 ## Initial Analysis and Setup
 
-- [ ] **Review Database Schema**
+- [x] **Review Database Schema**
   - **Why**: A thorough understanding of the database structure is essential before implementing authentication features.
   - **What**: Carefully review the SQL schema file to understand:
     - User table structure and related tables (invitations, sessions, password_history, etc.)
