@@ -75,7 +75,7 @@
 
 ## Password Recovery Flows
 
-- [ ] **Implement Forgot Password Service**
+- [x] **Implement Forgot Password Service**
   - **Why**: Users need a secure way to recover access when they forget their password.
   - **What**: Create a service that:
     - Handles forgot password requests by email
@@ -84,7 +84,7 @@
     - Validates user existence without revealing account information
     - Records appropriate audit logs
 
-- [ ] **Implement Reset Password Service**
+- [x] **Implement Reset Password Service**
   - **Why**: A secure password reset process is needed to complete the recovery flow.
   - **What**: Create a service that:
     - Validates reset tokens
