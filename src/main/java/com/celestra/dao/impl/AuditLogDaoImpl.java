@@ -48,12 +48,12 @@ public class AuditLogDaoImpl extends AbstractBaseDao<AuditLog, Integer> implemen
             RECORD_ID_COLUMN + ", " + 
             GROUP_ID_COLUMN + ", " + 
             CREATED_AT_COLUMN + 
-            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            ") VALUES (?, ?::audit_event_type, ?, ?, ?, ?, ?, ?, ?, ?::uuid, ?)";
     
     private static final String UPDATE_SQL = 
             "UPDATE " + TABLE_NAME + " SET " + 
             USER_ID_COLUMN + " = ?, " + 
-            EVENT_TYPE_COLUMN + " = ?, " + 
+            EVENT_TYPE_COLUMN + " = ?::audit_event_type, " + 
             EVENT_DESCRIPTION_COLUMN + " = ?, " + 
             IP_ADDRESS_COLUMN + " = ?, " + 
             SIGNED_BY_COLUMN + " = ?, " + 
@@ -61,14 +61,14 @@ public class AuditLogDaoImpl extends AbstractBaseDao<AuditLog, Integer> implemen
             REASON_COLUMN + " = ?, " + 
             TABLE_NAME_COLUMN + " = ?, " + 
             RECORD_ID_COLUMN + " = ?, " + 
-            GROUP_ID_COLUMN + " = ? " + 
+            GROUP_ID_COLUMN + " = ?::uuid " + 
             "WHERE " + ID_COLUMN + " = ?";
     
     private static final String FIND_BY_USER_ID_SQL = 
             "SELECT * FROM " + TABLE_NAME + " WHERE " + USER_ID_COLUMN + " = ?";
     
     private static final String FIND_BY_EVENT_TYPE_SQL = 
-            "SELECT * FROM " + TABLE_NAME + " WHERE " + EVENT_TYPE_COLUMN + " = ?";
+            "SELECT * FROM " + TABLE_NAME + " WHERE " + EVENT_TYPE_COLUMN + " = ?::audit_event_type";
     
     private static final String FIND_BY_TABLE_NAME_SQL = 
             "SELECT * FROM " + TABLE_NAME + " WHERE " + TABLE_NAME_COLUMN + " = ?";
@@ -77,13 +77,13 @@ public class AuditLogDaoImpl extends AbstractBaseDao<AuditLog, Integer> implemen
             "SELECT * FROM " + TABLE_NAME + " WHERE " + RECORD_ID_COLUMN + " = ?";
     
     private static final String FIND_BY_GROUP_ID_SQL = 
-            "SELECT * FROM " + TABLE_NAME + " WHERE " + GROUP_ID_COLUMN + " = ?";
+            "SELECT * FROM " + TABLE_NAME + " WHERE " + GROUP_ID_COLUMN + " = ?::uuid";
     
     private static final String FIND_BY_DATE_RANGE_SQL = 
-            "SELECT * FROM " + TABLE_NAME + " WHERE " + CREATED_AT_COLUMN + " >= ? AND " + CREATED_AT_COLUMN + " <= ?";
+            "SELECT * FROM " + TABLE_NAME + " WHERE " + CREATED_AT_COLUMN + " >= ?::timestamp AND " + CREATED_AT_COLUMN + " <= ?::timestamp";
     
     private static final String FIND_BY_USER_ID_AND_EVENT_TYPE_SQL = 
-            "SELECT * FROM " + TABLE_NAME + " WHERE " + USER_ID_COLUMN + " = ? AND " + EVENT_TYPE_COLUMN + " = ?";
+            "SELECT * FROM " + TABLE_NAME + " WHERE " + USER_ID_COLUMN + " = ? AND " + EVENT_TYPE_COLUMN + " = ?::audit_event_type";
     
     private static final String FIND_BY_TABLE_NAME_AND_RECORD_ID_SQL = 
             "SELECT * FROM " + TABLE_NAME + " WHERE " + TABLE_NAME_COLUMN + " = ? AND " + RECORD_ID_COLUMN + " = ?";

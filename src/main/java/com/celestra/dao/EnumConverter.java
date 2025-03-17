@@ -133,4 +133,27 @@ public class EnumConverter {
     public static <E extends Enum<E>> void setEnumAsInteger(PreparedStatement ps, int parameterIndex, E value) throws SQLException {
         setEnum(ps, parameterIndex, value, true);
     }
+    
+    /**
+     * Get the PostgreSQL enum type name for a Java enum class.
+     * 
+     * @param <E> The enum type
+     * @param enumClass The enum class
+     * @return The PostgreSQL enum type name
+     */
+    public static <E extends Enum<E>> String getPostgresEnumTypeName(Class<E> enumClass) {
+        String className = enumClass.getSimpleName();
+        return className.toLowerCase() + "_type";
+    }
+    
+    /**
+     * Get the PostgreSQL enum type cast for a column in a SQL query.
+     * 
+     * @param columnName The column name
+     * @param enumTypeName The PostgreSQL enum type name
+     * @return The SQL fragment for the column with type cast
+     */
+    public static String getPostgresEnumTypeCast(String columnName, String enumTypeName) {
+        return columnName + "::" + enumTypeName;
+    }
 }

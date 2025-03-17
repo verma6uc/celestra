@@ -43,15 +43,15 @@ public class UserDaoImpl extends AbstractBaseDao<User, Integer> implements UserD
             STATUS_COLUMN + ", " + 
             CREATED_AT_COLUMN + ", " + 
             UPDATED_AT_COLUMN + 
-            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            ") VALUES (?, ?::user_role, ?, ?, ?, ?::user_status, ?, ?)";
     
     private static final String UPDATE_SQL = 
             "UPDATE " + TABLE_NAME + " SET " + 
             COMPANY_ID_COLUMN + " = ?, " + 
-            ROLE_COLUMN + " = ?, " + 
+            ROLE_COLUMN + " = ?::user_role, " + 
             EMAIL_COLUMN + " = ?, " + 
             NAME_COLUMN + " = ?, " + 
-            STATUS_COLUMN + " = ?, " + 
+            STATUS_COLUMN + " = ?::user_status, " + 
             UPDATED_AT_COLUMN + " = ? " + 
             "WHERE " + ID_COLUMN + " = ?";
     
@@ -62,13 +62,13 @@ public class UserDaoImpl extends AbstractBaseDao<User, Integer> implements UserD
             "SELECT * FROM " + TABLE_NAME + " WHERE " + COMPANY_ID_COLUMN + " = ?";
     
     private static final String FIND_BY_ROLE_SQL = 
-            "SELECT * FROM " + TABLE_NAME + " WHERE " + ROLE_COLUMN + " = ?";
+            "SELECT * FROM " + TABLE_NAME + " WHERE " + ROLE_COLUMN + " = ?::user_role";
     
     private static final String FIND_BY_STATUS_SQL = 
-            "SELECT * FROM " + TABLE_NAME + " WHERE " + STATUS_COLUMN + " = ?";
+            "SELECT * FROM " + TABLE_NAME + " WHERE " + STATUS_COLUMN + " = ?::user_status";
     
     private static final String FIND_BY_COMPANY_ID_AND_ROLE_SQL = 
-            "SELECT * FROM " + TABLE_NAME + " WHERE " + COMPANY_ID_COLUMN + " = ? AND " + ROLE_COLUMN + " = ?";
+            "SELECT * FROM " + TABLE_NAME + " WHERE " + COMPANY_ID_COLUMN + " = ? AND " + ROLE_COLUMN + " = ?::user_role";
     
     private static final String UPDATE_PASSWORD_SQL = 
             "UPDATE " + TABLE_NAME + " SET " + 
@@ -78,7 +78,7 @@ public class UserDaoImpl extends AbstractBaseDao<User, Integer> implements UserD
     
     private static final String UPDATE_STATUS_SQL = 
             "UPDATE " + TABLE_NAME + " SET " + 
-            STATUS_COLUMN + " = ?, " + 
+            STATUS_COLUMN + " = ?::user_status, " + 
             UPDATED_AT_COLUMN + " = ? " + 
             "WHERE " + ID_COLUMN + " = ?";
     
@@ -86,7 +86,7 @@ public class UserDaoImpl extends AbstractBaseDao<User, Integer> implements UserD
             "SELECT * FROM " + TABLE_NAME + " WHERE " + 
             EMAIL_COLUMN + " = ? AND " + 
             PASSWORD_HASH_COLUMN + " = ? AND " + 
-            STATUS_COLUMN + " = ?";
+            STATUS_COLUMN + " = ?::user_status";
     
     @Override
     protected String getTableName() {

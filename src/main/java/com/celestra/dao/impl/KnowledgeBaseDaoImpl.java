@@ -41,14 +41,14 @@ public class KnowledgeBaseDaoImpl extends AbstractBaseDao<KnowledgeBase, Integer
             STATUS_COLUMN + ", " + 
             CREATED_AT_COLUMN + ", " + 
             UPDATED_AT_COLUMN + 
-            ") VALUES (?, ?, ?, ?, ?, ?)";
+            ") VALUES (?, ?, ?, ?::knowledge_base_status, ?, ?)";
     
     private static final String UPDATE_SQL = 
             "UPDATE " + TABLE_NAME + " SET " + 
             COMPANY_ID_COLUMN + " = ?, " + 
             NAME_COLUMN + " = ?, " + 
             DESCRIPTION_COLUMN + " = ?, " + 
-            STATUS_COLUMN + " = ?, " + 
+            STATUS_COLUMN + " = ?::knowledge_base_status, " + 
             UPDATED_AT_COLUMN + " = ? " + 
             "WHERE " + ID_COLUMN + " = ?";
     
@@ -56,10 +56,10 @@ public class KnowledgeBaseDaoImpl extends AbstractBaseDao<KnowledgeBase, Integer
             "SELECT * FROM " + TABLE_NAME + " WHERE " + COMPANY_ID_COLUMN + " = ?";
     
     private static final String FIND_BY_STATUS_SQL = 
-            "SELECT * FROM " + TABLE_NAME + " WHERE " + STATUS_COLUMN + " = ?";
+            "SELECT * FROM " + TABLE_NAME + " WHERE " + STATUS_COLUMN + " = ?::knowledge_base_status";
     
     private static final String FIND_BY_COMPANY_ID_AND_STATUS_SQL = 
-            "SELECT * FROM " + TABLE_NAME + " WHERE " + COMPANY_ID_COLUMN + " = ? AND " + STATUS_COLUMN + " = ?";
+            "SELECT * FROM " + TABLE_NAME + " WHERE " + COMPANY_ID_COLUMN + " = ? AND " + STATUS_COLUMN + " = ?::knowledge_base_status";
     
     private static final String FIND_BY_NAME_CONTAINING_SQL = 
             "SELECT * FROM " + TABLE_NAME + " WHERE " + NAME_COLUMN + " LIKE ?";
@@ -71,7 +71,7 @@ public class KnowledgeBaseDaoImpl extends AbstractBaseDao<KnowledgeBase, Integer
     
     private static final String UPDATE_STATUS_SQL = 
             "UPDATE " + TABLE_NAME + " SET " + 
-            STATUS_COLUMN + " = ?, " + 
+            STATUS_COLUMN + " = ?::knowledge_base_status, " + 
             UPDATED_AT_COLUMN + " = ? " + 
             "WHERE " + ID_COLUMN + " = ?";
     
