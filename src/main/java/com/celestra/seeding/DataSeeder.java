@@ -3,6 +3,7 @@ package com.celestra.seeding;
 import com.celestra.db.DatabaseUtil;
 import com.celestra.seeding.seeders.CompanySeeder;
 import com.celestra.seeding.seeders.KnowledgeTypeSeeder;
+import com.celestra.seeding.seeders.AuditChangeLogSeeder;
 import com.celestra.seeding.seeders.AgentSeeder;
 import com.celestra.seeding.seeders.KnowledgeBaseSeeder;
 import com.celestra.seeding.seeders.AgentKnowledgeBaseSeeder;
@@ -69,6 +70,7 @@ public class DataSeeder {
     private static List<Integer> invitationIds;
     private static List<Integer> notificationIds;
     private static List<Integer> passwordHistoryIds;
+    private static List<Integer> auditChangeLogIds;
     private static List<Integer> knowledgeSourceIds;
     /**
      * Main method to run the data seeding process.
@@ -422,7 +424,10 @@ public class DataSeeder {
      */
     private static void seedAuditChangeLogs(Connection connection) throws SQLException {
         LOGGER.info("Seeding audit_change_logs table...");
-        // TODO: Implement audit change log seeding
-        LOGGER.info("Seeded " + NUM_AUDIT_CHANGE_LOGS + " audit change logs.");
+        
+        AuditChangeLogSeeder auditChangeLogSeeder = new AuditChangeLogSeeder(connection, NUM_AUDIT_CHANGE_LOGS, auditLogIds);
+        auditChangeLogIds = auditChangeLogSeeder.seed();
+        
+        LOGGER.info("Seeded " + auditChangeLogIds.size() + " audit change logs.");
     }
 }
