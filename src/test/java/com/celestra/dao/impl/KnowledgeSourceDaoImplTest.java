@@ -3,6 +3,8 @@ package com.celestra.dao.impl;
 import static org.junit.Assert.*;
 
 import java.sql.SQLException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -13,6 +15,7 @@ import org.junit.Test;
 import com.celestra.dao.BaseDaoTest;
 import com.celestra.dao.KnowledgeSourceDao;
 import com.celestra.model.KnowledgeSource;
+import com.celestra.db.DatabaseUtil;
 
 /**
  * Test class for KnowledgeSourceDaoImpl.
@@ -40,32 +43,32 @@ public class KnowledgeSourceDaoImplTest extends BaseDaoTest {
         cleanupTestData();
         
         // Insert test companies first (to satisfy foreign key constraints)
-        executeSQL("INSERT INTO companies (id, name, description, size, vertical, status, created_at, updated_at) " +
-                   "VALUES (1, 'Test Company 1', 'Test Company Description 1', 'SMALL'::company_size, 'TECH'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW())");
+        executeSQL("INSERT INTO companies (name, description, size, vertical, status, created_at, updated_at) " +
+                   "VALUES ('Test Company 1', 'Test Company Description 1', 'SMALL'::company_size, 'TECH'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW()) RETURNING id");
         
         // Insert test knowledge bases (to satisfy foreign key constraints)
-        executeSQL("INSERT INTO knowledge_bases (id, company_id, name, description, status, created_at, updated_at) " +
-                   "VALUES (1, 1, 'Test Knowledge Base 1', 'Test Knowledge Base Description 1', 'ACTIVE'::knowledge_base_status, NOW(), NOW())");
+        executeSQL("INSERT INTO knowledge_bases (company_id, name, description, status, created_at, updated_at) " +
+                   "VALUES ((SELECT id FROM companies WHERE name = 'Test Company 1'), 'Test Knowledge Base 1', 'Test Knowledge Base Description 1', 'ACTIVE'::knowledge_base_status, NOW(), NOW()) RETURNING id");
         
-        executeSQL("INSERT INTO knowledge_bases (id, company_id, name, description, status, created_at, updated_at) " +
-                   "VALUES (2, 1, 'Test Knowledge Base 2', 'Test Knowledge Base Description 2', 'ACTIVE'::knowledge_base_status, NOW(), NOW())");
+        executeSQL("INSERT INTO knowledge_bases (company_id, name, description, status, created_at, updated_at) " +
+                   "VALUES ((SELECT id FROM companies WHERE name = 'Test Company 1'), 'Test Knowledge Base 2', 'Test Knowledge Base Description 2', 'ACTIVE'::knowledge_base_status, NOW(), NOW()) RETURNING id");
         
         // Insert test knowledge types (to satisfy foreign key constraints)
-        executeSQL("INSERT INTO knowledge_types (id, name, description, created_at, updated_at) " +
-                   "VALUES (1, 'Test Document', 'Test Document-based knowledge source', NOW(), NOW())");
+        executeSQL("INSERT INTO knowledge_types (name, description, created_at, updated_at) " +
+                   "VALUES ('Test Document', 'Test Document-based knowledge source', NOW(), NOW()) RETURNING id");
         
-        executeSQL("INSERT INTO knowledge_types (id, name, description, created_at, updated_at) " +
-                   "VALUES (2, 'Test Database', 'Test Database-based knowledge source', NOW(), NOW())");
+        executeSQL("INSERT INTO knowledge_types (name, description, created_at, updated_at) " +
+                   "VALUES ('Test Database', 'Test Database-based knowledge source', NOW(), NOW()) RETURNING id");
         
         // Insert test knowledge sources
         executeSQL("INSERT INTO knowledge_sources (id, knowledge_base_id, knowledge_type_id, name, created_at, updated_at) " +
-                   "VALUES (nextval('knowledge_sources_id_seq'), 1, 1, 'Test Document Source', NOW(), NOW())");
+                   "VALUES (nextval('knowledge_sources_id_seq'), (SELECT id FROM knowledge_bases WHERE name = 'Test Knowledge Base 1'), (SELECT id FROM knowledge_types WHERE name = 'Test Document'), 'Test Document Source', NOW(), NOW())");
         
         executeSQL("INSERT INTO knowledge_sources (id, knowledge_base_id, knowledge_type_id, name, created_at, updated_at) " +
-                   "VALUES (nextval('knowledge_sources_id_seq'), 1, 2, 'Test Database Source', NOW(), NOW())");
+                   "VALUES (nextval('knowledge_sources_id_seq'), (SELECT id FROM knowledge_bases WHERE name = 'Test Knowledge Base 1'), (SELECT id FROM knowledge_types WHERE name = 'Test Database'), 'Test Database Source', NOW(), NOW())");
         
         executeSQL("INSERT INTO knowledge_sources (id, knowledge_base_id, knowledge_type_id, name, created_at, updated_at) " +
-                   "VALUES (nextval('knowledge_sources_id_seq'), 2, 1, 'Test Document Source 2', NOW(), NOW())");
+                   "VALUES (nextval('knowledge_sources_id_seq'), (SELECT id FROM knowledge_bases WHERE name = 'Test Knowledge Base 2'), (SELECT id FROM knowledge_types WHERE name = 'Test Document'), 'Test Document Source 2', NOW(), NOW())");
     }
     
     @Override
@@ -73,7 +76,7 @@ public class KnowledgeSourceDaoImplTest extends BaseDaoTest {
         executeSQL("DELETE FROM knowledge_sources WHERE name LIKE 'Test%'");
         executeSQL("DELETE FROM knowledge_types WHERE name LIKE 'Test%'");
         executeSQL("DELETE FROM knowledge_bases WHERE name LIKE 'Test%'");
-        executeSQL("DELETE FROM companies WHERE id = 1");
+        executeSQL("DELETE FROM companies WHERE name = 'Test Company 1'");
     }
     
     /**
@@ -83,8 +86,8 @@ public class KnowledgeSourceDaoImplTest extends BaseDaoTest {
     public void testCreate() throws SQLException {
         // Create a new knowledge source
         KnowledgeSource knowledgeSource = new KnowledgeSource();
-        knowledgeSource.setKnowledgeBaseId(1);
-        knowledgeSource.setKnowledgeTypeId(1);
+        knowledgeSource.setKnowledgeBaseId(getKnowledgeBaseId("Test Knowledge Base 1"));
+        knowledgeSource.setKnowledgeTypeId(getKnowledgeTypeId("Test Document"));
         knowledgeSource.setName("Test Knowledge Source Create");
         
         KnowledgeSource createdKnowledgeSource = knowledgeSourceDao.create(knowledgeSource);
@@ -140,15 +143,15 @@ public class KnowledgeSourceDaoImplTest extends BaseDaoTest {
     public void testUpdate() throws SQLException {
         // Create a new knowledge source
         KnowledgeSource knowledgeSource = new KnowledgeSource();
-        knowledgeSource.setKnowledgeBaseId(1);
-        knowledgeSource.setKnowledgeTypeId(1);
+        knowledgeSource.setKnowledgeBaseId(getKnowledgeBaseId("Test Knowledge Base 1"));
+        knowledgeSource.setKnowledgeTypeId(getKnowledgeTypeId("Test Document"));
         knowledgeSource.setName("Test Knowledge Source Update");
         
         KnowledgeSource createdKnowledgeSource = knowledgeSourceDao.create(knowledgeSource);
         
         // Update the knowledge source
         createdKnowledgeSource.setName("Test Knowledge Source Updated");
-        createdKnowledgeSource.setKnowledgeTypeId(2);
+        createdKnowledgeSource.setKnowledgeTypeId(getKnowledgeTypeId("Test Database"));
         
         KnowledgeSource updatedKnowledgeSource = knowledgeSourceDao.update(createdKnowledgeSource);
         
@@ -168,8 +171,8 @@ public class KnowledgeSourceDaoImplTest extends BaseDaoTest {
     public void testDelete() throws SQLException {
         // Create a new knowledge source
         KnowledgeSource knowledgeSource = new KnowledgeSource();
-        knowledgeSource.setKnowledgeBaseId(1);
-        knowledgeSource.setKnowledgeTypeId(1);
+        knowledgeSource.setKnowledgeBaseId(getKnowledgeBaseId("Test Knowledge Base 1"));
+        knowledgeSource.setKnowledgeTypeId(getKnowledgeTypeId("Test Document"));
         knowledgeSource.setName("Test Knowledge Source Delete");
         
         KnowledgeSource createdKnowledgeSource = knowledgeSourceDao.create(knowledgeSource);
@@ -190,14 +193,14 @@ public class KnowledgeSourceDaoImplTest extends BaseDaoTest {
     @Test
     public void testFindByKnowledgeBaseId() throws SQLException {
         // Find knowledge sources by knowledge base ID
-        List<KnowledgeSource> knowledgeSources = knowledgeSourceDao.findByKnowledgeBaseId(1);
+        List<KnowledgeSource> knowledgeSources = knowledgeSourceDao.findByKnowledgeBaseId(getKnowledgeBaseId("Test Knowledge Base 1"));
         
         // Verify there are knowledge sources
-        assertFalse("There should be knowledge sources for knowledge base ID 1", knowledgeSources.isEmpty());
+        assertFalse("There should be knowledge sources for Test Knowledge Base 1", knowledgeSources.isEmpty());
         
         // Verify all entries have the correct knowledge base ID
         for (KnowledgeSource knowledgeSource : knowledgeSources) {
-            assertEquals("Knowledge source knowledge base ID should be 1", Integer.valueOf(1), knowledgeSource.getKnowledgeBaseId());
+            assertEquals("Knowledge source knowledge base ID should match Test Knowledge Base 1", getKnowledgeBaseId("Test Knowledge Base 1"), knowledgeSource.getKnowledgeBaseId());
         }
     }
     
@@ -207,14 +210,14 @@ public class KnowledgeSourceDaoImplTest extends BaseDaoTest {
     @Test
     public void testFindByKnowledgeTypeId() throws SQLException {
         // Find knowledge sources by knowledge type ID
-        List<KnowledgeSource> knowledgeSources = knowledgeSourceDao.findByKnowledgeTypeId(1);
+        List<KnowledgeSource> knowledgeSources = knowledgeSourceDao.findByKnowledgeTypeId(getKnowledgeTypeId("Test Document"));
         
         // Verify there are knowledge sources
-        assertFalse("There should be knowledge sources for knowledge type ID 1", knowledgeSources.isEmpty());
+        assertFalse("There should be knowledge sources for Test Document", knowledgeSources.isEmpty());
         
         // Verify all entries have the correct knowledge type ID
         for (KnowledgeSource knowledgeSource : knowledgeSources) {
-            assertEquals("Knowledge source knowledge type ID should be 1", Integer.valueOf(1), knowledgeSource.getKnowledgeTypeId());
+            assertEquals("Knowledge source knowledge type ID should match Test Document", getKnowledgeTypeId("Test Document"), knowledgeSource.getKnowledgeTypeId());
         }
     }
     
@@ -255,15 +258,51 @@ public class KnowledgeSourceDaoImplTest extends BaseDaoTest {
     @Test
     public void testFindByKnowledgeBaseIdAndKnowledgeTypeId() throws SQLException {
         // Find knowledge sources by knowledge base ID and knowledge type ID
-        List<KnowledgeSource> knowledgeSources = knowledgeSourceDao.findByKnowledgeBaseIdAndKnowledgeTypeId(1, 1);
+        List<KnowledgeSource> knowledgeSources = knowledgeSourceDao.findByKnowledgeBaseIdAndKnowledgeTypeId(
+                getKnowledgeBaseId("Test Knowledge Base 1"), 
+                getKnowledgeTypeId("Test Document"));
         
         // Verify there are knowledge sources
-        assertFalse("There should be knowledge sources for knowledge base ID 1 and knowledge type ID 1", knowledgeSources.isEmpty());
+        assertFalse("There should be knowledge sources for Test Knowledge Base 1 and Test Document", knowledgeSources.isEmpty());
         
         // Verify all entries have the correct knowledge base ID and knowledge type ID
         for (KnowledgeSource knowledgeSource : knowledgeSources) {
-            assertEquals("Knowledge source knowledge base ID should be 1", Integer.valueOf(1), knowledgeSource.getKnowledgeBaseId());
-            assertEquals("Knowledge source knowledge type ID should be 1", Integer.valueOf(1), knowledgeSource.getKnowledgeTypeId());
+            assertEquals("Knowledge source knowledge base ID should match Test Knowledge Base 1", 
+                    getKnowledgeBaseId("Test Knowledge Base 1"), knowledgeSource.getKnowledgeBaseId());
+            assertEquals("Knowledge source knowledge type ID should match Test Document", 
+                    getKnowledgeTypeId("Test Document"), knowledgeSource.getKnowledgeTypeId());
+        }
+    }
+    
+    /**
+     * Helper method to get the ID of a knowledge base by name.
+     * 
+     * @param name The name of the knowledge base
+     * @return The ID of the knowledge base
+     * @throws SQLException if a database error occurs
+     */
+    private Integer getKnowledgeBaseId(String name) throws SQLException {
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT id FROM knowledge_bases WHERE name = ?")) {
+            ps.setString(1, name);
+            var rs = ps.executeQuery();
+            return rs.next() ? rs.getInt("id") : null;
+        }
+    }
+    
+    /**
+     * Helper method to get the ID of a knowledge type by name.
+     * 
+     * @param name The name of the knowledge type
+     * @return The ID of the knowledge type
+     * @throws SQLException if a database error occurs
+     */
+    private Integer getKnowledgeTypeId(String name) throws SQLException {
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT id FROM knowledge_types WHERE name = ?")) {
+            ps.setString(1, name);
+            var rs = ps.executeQuery();
+            return rs.next() ? rs.getInt("id") : null;
         }
     }
 }
