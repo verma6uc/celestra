@@ -11,6 +11,7 @@ import com.celestra.seeding.seeders.FailedLoginSeeder;
 import com.celestra.seeding.seeders.InvitationSeeder;
 import com.celestra.seeding.seeders.KnowledgeSourceSeeder;
 import com.celestra.seeding.seeders.NotificationSeeder;
+import com.celestra.seeding.seeders.PasswordHistorySeeder;
 import com.celestra.seeding.seeders.UserLockoutSeeder;
 import com.celestra.seeding.seeders.UserSessionSeeder;
 import com.celestra.seeding.seeders.UserSeeder;
@@ -67,6 +68,7 @@ public class DataSeeder {
     private static List<Integer> userLockoutIds;
     private static List<Integer> invitationIds;
     private static List<Integer> notificationIds;
+    private static List<Integer> passwordHistoryIds;
     private static List<Integer> knowledgeSourceIds;
     /**
      * Main method to run the data seeding process.
@@ -375,8 +377,11 @@ public class DataSeeder {
      */
     private static void seedPasswordHistory(Connection connection) throws SQLException {
         LOGGER.info("Seeding password_history table...");
-        // TODO: Implement password history seeding
-        LOGGER.info("Seeded " + NUM_PASSWORD_HISTORY + " password history entries.");
+        
+        PasswordHistorySeeder passwordHistorySeeder = new PasswordHistorySeeder(connection, NUM_PASSWORD_HISTORY, userIds);
+        passwordHistoryIds = passwordHistorySeeder.seed();
+        
+        LOGGER.info("Seeded " + passwordHistoryIds.size() + " password history entries.");
     }
     
     /**
