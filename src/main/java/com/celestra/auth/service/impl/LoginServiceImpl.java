@@ -15,6 +15,7 @@ import java.util.logging.Logger;
 
 import com.celestra.auth.config.AuthConfigProvider;
 import com.celestra.auth.config.AuthConfigurationManager;
+import com.celestra.auth.service.FailedLoginTrackingService;
 import com.celestra.auth.service.LoginService;
 import com.celestra.auth.util.EmailUtil;
 import com.celestra.auth.util.PasswordUtil;
@@ -29,6 +30,7 @@ import com.celestra.dao.impl.FailedLoginDaoImpl;
 import com.celestra.dao.impl.CompanyDaoImpl;
 import com.celestra.dao.impl.UserDaoImpl;
 import com.celestra.dao.impl.UserLockoutDaoImpl;
+import com.celestra.auth.service.impl.FailedLoginTrackingServiceImpl;
 import com.celestra.dao.impl.UserSessionDaoImpl;
 import com.celestra.db.TransactionUtil;
 import com.celestra.enums.AuditEventType;
@@ -51,7 +53,8 @@ public class LoginServiceImpl implements LoginService {
     
     protected final UserDao userDao;
     protected final UserSessionDao userSessionDao;
-    protected final FailedLoginDao failedLoginDao;
+    protected final FailedLoginTrackingService failedLoginTrackingService;
+    protected final FailedLoginDao failedLoginDao; // Kept for backward compatibility
     protected final UserLockoutDao userLockoutDao;
     protected final CompanyDao companyDao;
     protected final AuditLogDao auditLogDao;
@@ -62,9 +65,16 @@ public class LoginServiceImpl implements LoginService {
      * Initializes DAOs with default implementations.
      */
     public LoginServiceImpl() {
-        this(new UserDaoImpl(), new UserSessionDaoImpl(), new FailedLoginDaoImpl(), 
-             new UserLockoutDaoImpl(), new CompanyDaoImpl(), new AuditLogDaoImpl(), 
-             AuthConfigurationManager.getInstance());
+        this.userDao = new UserDaoImpl();
+        this.userSessionDao = new UserSessionDaoImpl();
+        FailedLoginDao failedLoginDao = new FailedLoginDaoImpl();
+        this.failedLoginDao = failedLoginDao;
+        this.userLockoutDao = new UserLockoutDaoImpl();
+        this.companyDao = new CompanyDaoImpl();
+        this.auditLogDao = new AuditLogDaoImpl();
+        this.config = AuthConfigurationManager.getInstance();
+        this.failedLoginTrackingService = new FailedLoginTrackingServiceImpl(failedLoginDao, this.userDao, this.auditLogDao, this.config);
+        // Other initializations will be done in the parameterized constructor
     }
     
     /**
@@ -73,8 +83,16 @@ public class LoginServiceImpl implements LoginService {
     public LoginServiceImpl(UserDao userDao, UserSessionDao userSessionDao, FailedLoginDao failedLoginDao,
                            UserLockoutDao userLockoutDao, CompanyDao companyDao, AuditLogDao auditLogDao, 
                            AuthConfigProvider config) {
+        this(userDao, userSessionDao, new FailedLoginTrackingServiceImpl(failedLoginDao, userDao, auditLogDao, config),
+             failedLoginDao, userLockoutDao, companyDao, auditLogDao, config);
+    }
+    
+    public LoginServiceImpl(UserDao userDao, UserSessionDao userSessionDao, FailedLoginTrackingService failedLoginTrackingService,
+                           FailedLoginDao failedLoginDao, UserLockoutDao userLockoutDao, CompanyDao companyDao, 
+                           AuditLogDao auditLogDao, AuthConfigProvider config) {
         this.userDao = userDao;
         this.userSessionDao = userSessionDao;
+        this.failedLoginTrackingService = failedLoginTrackingService;
         this.failedLoginDao = failedLoginDao;
         this.userLockoutDao = userLockoutDao;
         this.companyDao = companyDao;
@@ -88,12 +106,12 @@ public class LoginServiceImpl implements LoginService {
         
         // Validate input
         if (email == null || email.trim().isEmpty()) {
-            recordFailedLogin(null, ipAddress, "Email is required", metadata);
+            failedLoginTrackingService.recordFailedLogin((String)null, ipAddress, "Email is required", metadata);
             return Optional.empty();
         }
         
         if (password == null || password.trim().isEmpty()) {
-            recordFailedLogin(email, ipAddress, "Password is required", metadata);
+            failedLoginTrackingService.recordFailedLogin((String)email, ipAddress, "Password is required", metadata);
             return Optional.empty();
         }
         
@@ -103,7 +121,7 @@ public class LoginServiceImpl implements LoginService {
         // Find the user by email
         Optional<User> userOpt = userDao.findByEmail(email);
         if (!userOpt.isPresent()) {
-            recordFailedLogin(email, ipAddress, "User not found", metadata);
+            failedLoginTrackingService.recordFailedLogin((String)email, ipAddress, "User not found", metadata);
             return Optional.empty();
         }
         
@@ -111,14 +129,14 @@ public class LoginServiceImpl implements LoginService {
         
         // Check if the account is locked
         if (isAccountLocked(user.getId())) {
-            recordFailedLogin(email, ipAddress, "Account is locked", metadata);
+            failedLoginTrackingService.recordFailedLogin(user, ipAddress, "Account is locked", metadata);
             createAuditLog(user.getId(), AuditEventType.FAILED_LOGIN, "Login attempt on locked account", ipAddress, "users", user.getId().toString(), null);
             return Optional.empty();
         }
         
         // Check if the account is active
         if (user.getStatus() != UserStatus.ACTIVE) {
-            recordFailedLogin(email, ipAddress, "Account is not active", metadata);
+            failedLoginTrackingService.recordFailedLogin(user, ipAddress, "Account is not active", metadata);
             createAuditLog(user.getId(), AuditEventType.FAILED_LOGIN, "Login attempt on inactive account", ipAddress, "users", user.getId().toString(), null);
             return Optional.empty();
         }
@@ -133,7 +151,7 @@ public class LoginServiceImpl implements LoginService {
                     "Company not found" : 
                     "Company is not active";
                 
-                recordFailedLogin(email, ipAddress, reason, metadata);
+                failedLoginTrackingService.recordFailedLogin(user, ipAddress, reason, metadata);
                 createAuditLog(user.getId(), AuditEventType.FAILED_LOGIN, "Login attempt with inactive company", ipAddress, "users", user.getId().toString(), null);
                 return Optional.empty();
             }
@@ -141,11 +159,11 @@ public class LoginServiceImpl implements LoginService {
         
         // Verify the password
         if (!PasswordUtil.verifyPassword(password, user.getPasswordHash())) {
-            recordFailedLogin(email, ipAddress, "Invalid password", metadata);
+            failedLoginTrackingService.recordFailedLogin(user, ipAddress, "Invalid password", metadata);
             
             // Check if we need to lock the account
-            int failedAttempts = getRecentFailedLoginCount(user.getId(), config.getLockoutWindowMinutes());
-            if (failedAttempts >= config.getLockoutMaxAttempts()) {
+            if (failedLoginTrackingService.isFailedLoginThresholdExceeded(email)) {
+                int failedAttempts = failedLoginTrackingService.getRecentFailedLoginCount(email, config.getLockoutWindowMinutes());
                 lockAccount(user.getId(), failedAttempts, "Too many failed login attempts", ipAddress);
             }
             
@@ -319,48 +337,23 @@ public class LoginServiceImpl implements LoginService {
     @Override
     public void recordFailedLogin(String email, String ipAddress, String reason, Map<String, String> metadata) 
             throws SQLException {
-        
-        // Create the failed login record
-        FailedLogin failedLogin = new FailedLogin();
-        failedLogin.setEmail(email);
-        failedLogin.setIpAddress(ipAddress);
-        failedLogin.setFailureReason(reason);
-        failedLogin.setAttemptedAt(new Timestamp(System.currentTimeMillis()));
-        
-        // If email is provided, try to find the user ID
-        if (email != null && !email.trim().isEmpty()) {
-            Optional<User> userOpt = userDao.findByEmail(EmailUtil.normalizeEmail(email));
-            if (userOpt.isPresent()) {
-                failedLogin.setUserId(userOpt.get().getId());
-            }
-        }
-        
-        // Save the failed login record
-        failedLoginDao.create(failedLogin);
+        // Delegate to the FailedLoginTrackingService
+        failedLoginTrackingService.recordFailedLogin(email, ipAddress, reason, metadata);
     }
     
     @Override
     public int getRecentFailedLoginCount(Integer userId, int minutes) throws SQLException {
-        if (userId == null) {
-            return 0;
-        }
-        
-        // Find the user's email
-        Optional<User> userOpt = userDao.findById(userId);
-        if (!userOpt.isPresent()) {
-            return 0;
-        }
-        
-        return failedLoginDao.countRecentByEmail(userOpt.get().getEmail(), minutes);
+        // Find the user's email and delegate to the FailedLoginTrackingService
+        Optional<User> userOpt = userId != null ? userDao.findById(userId) : Optional.empty();
+        return userOpt.isPresent() 
+            ? failedLoginTrackingService.getRecentFailedLoginCount(userOpt.get().getEmail(), minutes)
+            : 0;
     }
     
     @Override
     public int getRecentFailedLoginCount(String ipAddress, int minutes) throws SQLException {
-        if (ipAddress == null || ipAddress.trim().isEmpty()) {
-            return 0;
-        }
-        
-        return failedLoginDao.countRecentByIpAddress(ipAddress, minutes);
+        // Delegate to the FailedLoginTrackingService
+        return failedLoginTrackingService.getRecentFailedLoginCountByIp(ipAddress, minutes);
     }
     
     /**
