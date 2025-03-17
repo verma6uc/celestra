@@ -6,14 +6,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.util.List;
 
 import com.celestra.dao.AbstractBaseDao;
 import com.celestra.dao.FailedLoginDao;
 import com.celestra.db.DatabaseUtil;
 import com.celestra.model.FailedLogin;
+
+import java.util.List;
 
 /**
  * Implementation of the FailedLoginDao interface.
@@ -107,12 +106,7 @@ public class FailedLoginDaoImpl extends AbstractBaseDao<FailedLogin, Integer> im
         }
         
         failedLogin.setIpAddress(rs.getString(IP_ADDRESS_COLUMN));
-        
-        Timestamp timestamp = rs.getTimestamp(ATTEMPTED_AT_COLUMN);
-        if (timestamp != null) {
-            failedLogin.setAttemptedAt(timestamp.toInstant().atOffset(OffsetDateTime.now().getOffset()));
-        }
-        
+        failedLogin.setAttemptedAt(rs.getTimestamp(ATTEMPTED_AT_COLUMN));
         failedLogin.setFailureReason(rs.getString(FAILURE_REASON_COLUMN));
         
         return failedLogin;
@@ -129,7 +123,7 @@ public class FailedLoginDaoImpl extends AbstractBaseDao<FailedLogin, Integer> im
         ps.setString(2, failedLogin.getIpAddress());
         
         if (failedLogin.getAttemptedAt() != null) {
-            ps.setTimestamp(3, Timestamp.from(failedLogin.getAttemptedAt().toInstant()));
+            ps.setTimestamp(3, failedLogin.getAttemptedAt());
         } else {
             ps.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
         }
@@ -148,7 +142,7 @@ public class FailedLoginDaoImpl extends AbstractBaseDao<FailedLogin, Integer> im
         ps.setString(2, failedLogin.getIpAddress());
         
         if (failedLogin.getAttemptedAt() != null) {
-            ps.setTimestamp(3, Timestamp.from(failedLogin.getAttemptedAt().toInstant()));
+            ps.setTimestamp(3, failedLogin.getAttemptedAt());
         } else {
             ps.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
         }

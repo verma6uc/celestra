@@ -1,6 +1,6 @@
 package com.celestra.model;
 
-import java.time.OffsetDateTime;
+import java.sql.Timestamp;
 import java.util.Objects;
 
 /**
@@ -11,7 +11,7 @@ public class FailedLogin {
     private Integer id;
     private Integer userId;
     private String ipAddress;
-    private OffsetDateTime attemptedAt;
+    private Timestamp attemptedAt;
     private String failureReason;
     
     // Reference to the associated user (not stored in database)
@@ -45,7 +45,7 @@ public class FailedLogin {
      * @param failureReason The description of why authentication failed
      */
     public FailedLogin(Integer id, Integer userId, String ipAddress, 
-                      OffsetDateTime attemptedAt, String failureReason) {
+                      Timestamp attemptedAt, String failureReason) {
         this.id = id;
         this.userId = userId;
         this.ipAddress = ipAddress;
@@ -79,11 +79,11 @@ public class FailedLogin {
         this.ipAddress = ipAddress;
     }
 
-    public OffsetDateTime getAttemptedAt() {
+    public Timestamp getAttemptedAt() {
         return attemptedAt;
     }
 
-    public void setAttemptedAt(OffsetDateTime attemptedAt) {
+    public void setAttemptedAt(Timestamp attemptedAt) {
         this.attemptedAt = attemptedAt;
     }
 

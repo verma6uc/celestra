@@ -3,7 +3,7 @@ package com.celestra.dao.impl;
 import static org.junit.Assert.*;
 
 import java.sql.SQLException;
-import java.time.OffsetDateTime;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,9 +39,13 @@ public class FailedLoginDaoImplTest extends BaseDaoTest {
         // Clean up any existing test data
         cleanupTestData();
         
+        // First insert test company to satisfy foreign key constraints
+        executeSQL("INSERT INTO companies (id, name, description, size, vertical, status, created_at, updated_at) " +
+                   "VALUES (1, 'Test Company 1', 'Test Company Description 1', 'SMALL'::company_size, 'TECH'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW())");
+        
         // Insert test user
         executeSQL("INSERT INTO users (id, company_id, role, email, name, password_hash, status, created_at, updated_at) " +
-                   "VALUES (999, 1, 'REGULAR_USER', 'testuser@test.com', 'Test User', 'hash123', 'ACTIVE', NOW(), NOW())");
+                   "VALUES (999, 1, 'REGULAR_USER'::user_role, 'testuser@test.com', 'Test User', 'hash123', 'ACTIVE'::user_status, NOW(), NOW())");
         
         executeSQL("INSERT INTO failed_logins (user_id, ip_address, attempted_at, failure_reason) " +
                    "VALUES (999, '192.168.1.1', NOW(), 'Invalid password')");
@@ -57,6 +61,7 @@ public class FailedLoginDaoImplTest extends BaseDaoTest {
     protected void cleanupTestData() throws SQLException {
         executeSQL("DELETE FROM failed_logins WHERE ip_address LIKE '192.168.1.%'");
         executeSQL("DELETE FROM users WHERE email = 'testuser@test.com'");
+        executeSQL("DELETE FROM companies WHERE id = 1");
     }
     
     /**
@@ -68,7 +73,7 @@ public class FailedLoginDaoImplTest extends BaseDaoTest {
         FailedLogin failedLogin = new FailedLogin();
         failedLogin.setIpAddress("192.168.1.100");
         failedLogin.setFailureReason("Test failure reason");
-        failedLogin.setAttemptedAt(OffsetDateTime.now());
+        failedLogin.setAttemptedAt(new Timestamp(System.currentTimeMillis()));
         
         FailedLogin createdFailedLogin = failedLoginDao.create(failedLogin);
         
@@ -126,7 +131,7 @@ public class FailedLoginDaoImplTest extends BaseDaoTest {
         FailedLogin failedLogin = new FailedLogin();
         failedLogin.setIpAddress("192.168.1.101");
         failedLogin.setFailureReason("Test update reason");
-        failedLogin.setAttemptedAt(OffsetDateTime.now());
+        failedLogin.setAttemptedAt(new Timestamp(System.currentTimeMillis()));
         
         FailedLogin createdFailedLogin = failedLoginDao.create(failedLogin);
         
@@ -154,7 +159,7 @@ public class FailedLoginDaoImplTest extends BaseDaoTest {
         FailedLogin failedLogin = new FailedLogin();
         failedLogin.setIpAddress("192.168.1.103");
         failedLogin.setFailureReason("Test delete reason");
-        failedLogin.setAttemptedAt(OffsetDateTime.now());
+        failedLogin.setAttemptedAt(new Timestamp(System.currentTimeMillis()));
         
         FailedLogin createdFailedLogin = failedLoginDao.create(failedLogin);
         
@@ -251,7 +256,7 @@ public class FailedLoginDaoImplTest extends BaseDaoTest {
         failedLogin.setFailureReason("Test old record");
         
         // Set timestamp to 10 days ago
-        OffsetDateTime oldTimestamp = OffsetDateTime.now().minusDays(10);
+        Timestamp oldTimestamp = new Timestamp(System.currentTimeMillis() - 10 * 24 * 60 * 60 * 1000L);
         failedLogin.setAttemptedAt(oldTimestamp);
         
         FailedLogin createdFailedLogin = failedLoginDao.create(failedLogin);
