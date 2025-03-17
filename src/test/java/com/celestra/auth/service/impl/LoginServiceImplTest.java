@@ -20,6 +20,7 @@ import org.mockito.MockitoAnnotations;
 
 import com.celestra.auth.config.AuthConfigProvider;
 import com.celestra.auth.service.LoginService;
+import com.celestra.auth.service.UserLockoutService;
 import com.celestra.dao.AuditLogDao;
 import com.celestra.dao.CompanyDao;
 import com.celestra.dao.FailedLoginDao;
@@ -60,6 +61,9 @@ public class LoginServiceImplTest {
     
     @Mock
     private AuthConfigProvider config;
+    
+    @Mock
+    private UserLockoutService userLockoutService;
     
     private TestableLoginServiceImpl loginService;
     
@@ -483,14 +487,17 @@ public class LoginServiceImplTest {
         // Set up our testable service
         loginService.setAccountLockedResult(true);
         
+        // Also set up the mock UserLockoutService
+        when(loginService.getMockUserLockoutService().isAccountLocked(email)).thenReturn(true);
+        
         // Act
         boolean result = loginService.isAccountLocked(email);
         
         // Assert
-        assertTrue(result);
+        assertTrue(result, "Account should be locked");
         
         // Verify interactions
-        verify(userDao).findByEmail(email);
+        verify(loginService.getMockUserLockoutService()).isAccountLocked(email);
     }
     
     @Test

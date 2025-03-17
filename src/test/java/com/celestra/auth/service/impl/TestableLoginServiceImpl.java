@@ -4,8 +4,12 @@ import java.sql.SQLException;
 import java.util.Map;
 import java.util.Optional;
 import java.sql.Timestamp;
+import static org.mockito.Mockito.*;
 
 import com.celestra.auth.config.AuthConfigProvider;
+import com.celestra.auth.service.FailedLoginTrackingService;
+import com.celestra.auth.service.UserLockoutService;
+import com.celestra.auth.service.impl.UserLockoutServiceImpl;
 import com.celestra.dao.AuditLogDao;
 import com.celestra.dao.FailedLoginDao;
 import com.celestra.dao.CompanyDao;
@@ -29,13 +33,37 @@ public class TestableLoginServiceImpl extends LoginServiceImpl {
     private boolean accountLockedResult = false;
     private boolean sessionExpiredResult = true;
     private boolean companyActiveResult = true;
+    private UserLockoutService mockUserLockoutService;
     
     public TestableLoginServiceImpl(UserDao userDao, UserSessionDao userSessionDao, 
                                    FailedLoginDao failedLoginDao, UserLockoutDao userLockoutDao, 
                                    CompanyDao companyDao, AuditLogDao auditLogDao, 
                                    AuthConfigProvider config) {
-        super(userDao, userSessionDao, failedLoginDao, userLockoutDao, companyDao, auditLogDao, config);
+        super(userDao, userSessionDao, 
+             new FailedLoginTrackingServiceImpl(failedLoginDao, userDao, auditLogDao, config),
+             createMockUserLockoutService(),
+             failedLoginDao, userLockoutDao, companyDao, auditLogDao, config);
     }
+    
+    private static UserLockoutService createMockUserLockoutService() {
+        UserLockoutService mock = mock(UserLockoutService.class);
+        // The actual behavior will be set by the test methods
+        return mock;
+    }
+    
+    public TestableLoginServiceImpl(UserDao userDao, UserSessionDao userSessionDao, FailedLoginTrackingService failedLoginTrackingService,
+                                   UserLockoutService userLockoutService, FailedLoginDao failedLoginDao, UserLockoutDao userLockoutDao, 
+                                   CompanyDao companyDao, AuditLogDao auditLogDao, AuthConfigProvider config) {
+        super(userDao, userSessionDao, failedLoginTrackingService, userLockoutService, failedLoginDao, userLockoutDao, companyDao, auditLogDao, config);
+    }
+
+    /**
+     * Get the mock UserLockoutService for configuration in tests.
+     */
+    public UserLockoutService getMockUserLockoutService() {
+        return this.userLockoutService;
+    }
+
     
     /**
      * Set the result to be returned by password verification.
@@ -53,6 +81,9 @@ public class TestableLoginServiceImpl extends LoginServiceImpl {
      */
     public void setAccountLockedResult(boolean result) {
         this.accountLockedResult = result;
+        try {
+            when(this.userLockoutService.isAccountLocked(any(Integer.class))).thenReturn(result);
+        } catch (SQLException e) { /* Ignore for testing */ }
     }
     
     /**
@@ -143,7 +174,7 @@ public class TestableLoginServiceImpl extends LoginServiceImpl {
             // Check if we need to lock the account
             int failedAttempts = getRecentFailedLoginCount(user.getId(), config.getLockoutWindowMinutes());
             if (failedAttempts >= config.getLockoutMaxAttempts()) {
-                lockAccount(user.getId(), failedAttempts, "Too many failed login attempts", ipAddress);
+                userLockoutService.lockAccount(user.getId(), failedAttempts, "Too many failed login attempts", ipAddress);
             }
             
             createAuditLog(user.getId(), AuditEventType.FAILED_LOGIN, "Invalid password", ipAddress, "users", user.getId().toString(), null);
@@ -160,7 +191,7 @@ public class TestableLoginServiceImpl extends LoginServiceImpl {
      */
     @Override
     public boolean isAccountLocked(Integer userId) throws SQLException {
-        return accountLockedResult;
+        return userLockoutService.isAccountLocked(userId);
     }
     
     /**

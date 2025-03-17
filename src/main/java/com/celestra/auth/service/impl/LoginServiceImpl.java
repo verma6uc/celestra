@@ -17,6 +17,7 @@ import com.celestra.auth.config.AuthConfigProvider;
 import com.celestra.auth.config.AuthConfigurationManager;
 import com.celestra.auth.service.FailedLoginTrackingService;
 import com.celestra.auth.service.LoginService;
+import com.celestra.auth.service.UserLockoutService;
 import com.celestra.auth.util.EmailUtil;
 import com.celestra.auth.util.PasswordUtil;
 import com.celestra.dao.AuditLogDao;
@@ -31,6 +32,7 @@ import com.celestra.dao.impl.CompanyDaoImpl;
 import com.celestra.dao.impl.UserDaoImpl;
 import com.celestra.dao.impl.UserLockoutDaoImpl;
 import com.celestra.auth.service.impl.FailedLoginTrackingServiceImpl;
+import com.celestra.auth.service.impl.UserLockoutServiceImpl;
 import com.celestra.dao.impl.UserSessionDaoImpl;
 import com.celestra.db.TransactionUtil;
 import com.celestra.enums.AuditEventType;
@@ -54,6 +56,7 @@ public class LoginServiceImpl implements LoginService {
     protected final UserDao userDao;
     protected final UserSessionDao userSessionDao;
     protected final FailedLoginTrackingService failedLoginTrackingService;
+    protected final UserLockoutService userLockoutService;
     protected final FailedLoginDao failedLoginDao; // Kept for backward compatibility
     protected final UserLockoutDao userLockoutDao;
     protected final CompanyDao companyDao;
@@ -73,7 +76,9 @@ public class LoginServiceImpl implements LoginService {
         this.companyDao = new CompanyDaoImpl();
         this.auditLogDao = new AuditLogDaoImpl();
         this.config = AuthConfigurationManager.getInstance();
-        this.failedLoginTrackingService = new FailedLoginTrackingServiceImpl(failedLoginDao, this.userDao, this.auditLogDao, this.config);
+        this.failedLoginTrackingService = new FailedLoginTrackingServiceImpl(
+            failedLoginDao, this.userDao, this.auditLogDao, this.config);
+        this.userLockoutService = new UserLockoutServiceImpl(this.userLockoutDao, this.userDao, this.userSessionDao, this.auditLogDao, this.config);
         // Other initializations will be done in the parameterized constructor
     }
     
@@ -83,16 +88,19 @@ public class LoginServiceImpl implements LoginService {
     public LoginServiceImpl(UserDao userDao, UserSessionDao userSessionDao, FailedLoginDao failedLoginDao,
                            UserLockoutDao userLockoutDao, CompanyDao companyDao, AuditLogDao auditLogDao, 
                            AuthConfigProvider config) {
-        this(userDao, userSessionDao, new FailedLoginTrackingServiceImpl(failedLoginDao, userDao, auditLogDao, config),
+        this(userDao, userSessionDao, 
+             new FailedLoginTrackingServiceImpl(failedLoginDao, userDao, auditLogDao, config),
+             new UserLockoutServiceImpl(userLockoutDao, userDao, userSessionDao, auditLogDao, config),
              failedLoginDao, userLockoutDao, companyDao, auditLogDao, config);
     }
     
     public LoginServiceImpl(UserDao userDao, UserSessionDao userSessionDao, FailedLoginTrackingService failedLoginTrackingService,
-                           FailedLoginDao failedLoginDao, UserLockoutDao userLockoutDao, CompanyDao companyDao, 
+                           UserLockoutService userLockoutService, FailedLoginDao failedLoginDao, UserLockoutDao userLockoutDao, CompanyDao companyDao, 
                            AuditLogDao auditLogDao, AuthConfigProvider config) {
         this.userDao = userDao;
         this.userSessionDao = userSessionDao;
         this.failedLoginTrackingService = failedLoginTrackingService;
+        this.userLockoutService = userLockoutService;
         this.failedLoginDao = failedLoginDao;
         this.userLockoutDao = userLockoutDao;
         this.companyDao = companyDao;
@@ -128,7 +136,7 @@ public class LoginServiceImpl implements LoginService {
         User user = userOpt.get();
         
         // Check if the account is locked
-        if (isAccountLocked(user.getId())) {
+        if (userLockoutService.isAccountLocked(user.getId())) {
             failedLoginTrackingService.recordFailedLogin(user, ipAddress, "Account is locked", metadata);
             createAuditLog(user.getId(), AuditEventType.FAILED_LOGIN, "Login attempt on locked account", ipAddress, "users", user.getId().toString(), null);
             return Optional.empty();
@@ -164,7 +172,7 @@ public class LoginServiceImpl implements LoginService {
             // Check if we need to lock the account
             if (failedLoginTrackingService.isFailedLoginThresholdExceeded(email)) {
                 int failedAttempts = failedLoginTrackingService.getRecentFailedLoginCount(email, config.getLockoutWindowMinutes());
-                lockAccount(user.getId(), failedAttempts, "Too many failed login attempts", ipAddress);
+                userLockoutService.lockAccount(user.getId(), failedAttempts, "Too many failed login attempts", ipAddress);
             }
             
             createAuditLog(user.getId(), AuditEventType.FAILED_LOGIN, "Invalid password", ipAddress, "users", user.getId().toString(), null);
@@ -231,7 +239,7 @@ public class LoginServiceImpl implements LoginService {
         }
         
         // Check if the user is locked
-        if (isAccountLocked(session.getUserId())) {
+        if (userLockoutService.isAccountLocked(session.getUserId())) {
             return Optional.empty();
         }
         
@@ -308,30 +316,15 @@ public class LoginServiceImpl implements LoginService {
     @Override
     public boolean isAccountLocked(Integer userId) throws SQLException {
         if (userId == null) {
-            return false;
+            throw new IllegalArgumentException("User ID is required");
         }
         
-        // Check if there's an active lockout for the user
-        Optional<UserLockout> lockoutOpt = userLockoutDao.findActiveByUserId(userId);
-        return lockoutOpt.isPresent() && lockoutOpt.get().isActive();
+        return userLockoutService.isAccountLocked(userId);
     }
     
     @Override
     public boolean isAccountLocked(String email) throws SQLException {
-        if (email == null || email.trim().isEmpty()) {
-            return false;
-        }
-        
-        // Normalize email
-        email = EmailUtil.normalizeEmail(email);
-        
-        // Find the user by email
-        Optional<User> userOpt = userDao.findByEmail(email);
-        if (!userOpt.isPresent()) {
-            return false;
-        }
-        
-        return isAccountLocked(userOpt.get().getId());
+        return userLockoutService.isAccountLocked(email);
     }
     
     @Override
@@ -354,45 +347,6 @@ public class LoginServiceImpl implements LoginService {
     public int getRecentFailedLoginCount(String ipAddress, int minutes) throws SQLException {
         // Delegate to the FailedLoginTrackingService
         return failedLoginTrackingService.getRecentFailedLoginCountByIp(ipAddress, minutes);
-    }
-    
-    /**
-     * Lock a user account due to security concerns.
-     * 
-     * @param userId The ID of the user to lock
-     * @param failedAttempts The number of failed login attempts
-     * @param reason The reason for the lockout
-     * @param ipAddress The IP address that triggered the lockout
-     * @throws SQLException if a database error occurs
-     */
-    protected void lockAccount(Integer userId, int failedAttempts, String reason, String ipAddress) throws SQLException {
-        // Create the lockout record
-        UserLockout lockout = new UserLockout();
-        lockout.setUserId(userId);
-        lockout.setFailedAttempts(failedAttempts);
-        lockout.setReason(reason);
-        lockout.setLockoutStart(new Timestamp(System.currentTimeMillis()));
-        
-        // Set lockout duration based on configuration
-        if (config.getLockoutPermanentAfterConsecutiveTempLockouts() > 0 && failedAttempts >= config.getLockoutPermanentAfterConsecutiveTempLockouts()) {
-            // Permanent lockout (null end time)
-            lockout.setLockoutEnd(null);
-        } else {
-            // Temporary lockout
-            lockout.setLockoutEnd(Timestamp.from(
-                Instant.now().plus(config.getLockoutDurationMinutes(), ChronoUnit.MINUTES)
-            ));
-        }
-        
-        // Save the lockout record
-        UserLockout createdLockout = userLockoutDao.create(lockout);
-        
-        // Create audit log
-        createAuditLog(userId, AuditEventType.OTHER, "Account locked: " + reason, 
-                      ipAddress, "user_lockouts", createdLockout.getId().toString(), reason);
-        
-        // End all active sessions for the user
-        endAllSessions(userId, "Account locked: " + reason);
     }
     
     /**

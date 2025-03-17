@@ -73,6 +73,14 @@ public class TestAuthConfigProvider implements AuthConfigProvider {
     public void setLockoutWindowMinutes(int lockoutWindowMinutes) {
         this.lockoutWindowMinutes = lockoutWindowMinutes;
     }
+
+    public void setLockoutDurationMinutes(int lockoutDurationMinutes) {
+        this.lockoutDurationMinutes = lockoutDurationMinutes;
+    }
+    
+    public void setLockoutPermanentAfterConsecutiveTempLockouts(int lockoutPermanentAfterConsecutiveTempLockouts) {
+        this.lockoutPermanentAfterConsecutiveTempLockouts = lockoutPermanentAfterConsecutiveTempLockouts;
+    }
     
     public void setPasswordResetTokenExpirationMinutes(int passwordResetTokenExpirationMinutes) {
         this.passwordResetTokenExpirationMinutes = passwordResetTokenExpirationMinutes;
