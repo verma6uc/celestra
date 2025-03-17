@@ -258,6 +258,9 @@ public class AuditServiceImpl implements AuditService {
         auditLog.setRecordId(user.getId().toString());
         auditLog.setCreatedAt(new Timestamp(System.currentTimeMillis()));
         
+        // Create digital signature
+        signAuditLog(auditLog, updatedByUser);
+        
         // Create the audit log first to get its ID
         AuditLog createdLog = auditLogDao.create(auditLog);
         
@@ -271,10 +274,7 @@ public class AuditServiceImpl implements AuditService {
                 }
             }
         }
-        // Create digital signature
-        signAuditLog(auditLog, updatedByUser);
-        
-        return auditLogDao.create(auditLog);
+        return createdLog;
     }
     
     @Override
@@ -303,6 +303,9 @@ public class AuditServiceImpl implements AuditService {
         auditLog.setRecordId(user.getId().toString());
         auditLog.setCreatedAt(new Timestamp(System.currentTimeMillis()));
         
+        // Create digital signature
+        signAuditLog(auditLog, changedByUser);
+        
         // Create the audit log first to get its ID
         AuditLog createdLog = auditLogDao.create(auditLog);
         
@@ -310,10 +313,7 @@ public class AuditServiceImpl implements AuditService {
         recordChange(createdLog.getId(), "status", oldStatus, newStatus);
         
         
-        // Create digital signature
-        signAuditLog(auditLog, changedByUser);
-        
-        return auditLogDao.create(auditLog);
+        return createdLog;
     }
     
     @Override
@@ -342,6 +342,9 @@ public class AuditServiceImpl implements AuditService {
         auditLog.setRecordId(user.getId().toString());
         auditLog.setCreatedAt(new Timestamp(System.currentTimeMillis()));
         
+        // Create digital signature
+        signAuditLog(auditLog, changedByUser);
+        
         // Create the audit log first to get its ID
         AuditLog createdLog = auditLogDao.create(auditLog);
         
@@ -349,10 +352,7 @@ public class AuditServiceImpl implements AuditService {
         recordChange(createdLog.getId(), "role", oldRole, newRole);
         
         
-        // Create digital signature
-        signAuditLog(auditLog, changedByUser);
-        
-        return auditLogDao.create(auditLog);
+        return createdLog;
     }
     
     @Override

@@ -11,6 +11,7 @@ import java.util.logging.Logger;
 
 import com.celestra.auth.config.AuthConfigProvider;
 import com.celestra.auth.config.AuthConfigurationManager;
+import com.celestra.auth.service.AuditService;
 import com.celestra.auth.service.UserLockoutService;
 import com.celestra.auth.util.EmailUtil;
 import com.celestra.dao.AuditLogDao;
@@ -22,7 +23,6 @@ import com.celestra.dao.impl.UserDaoImpl;
 import com.celestra.dao.impl.UserLockoutDaoImpl;
 import com.celestra.dao.impl.UserSessionDaoImpl;
 import com.celestra.enums.AuditEventType;
-import com.celestra.model.AuditLog;
 import com.celestra.model.User;
 import com.celestra.model.UserLockout;
 
@@ -37,6 +37,7 @@ public class UserLockoutServiceImpl implements UserLockoutService {
     protected final UserDao userDao;
     protected final UserSessionDao userSessionDao;
     protected final AuditLogDao auditLogDao;
+    protected final AuditService auditService;
     protected final AuthConfigProvider config;
     
     /**
@@ -45,7 +46,7 @@ public class UserLockoutServiceImpl implements UserLockoutService {
      */
     public UserLockoutServiceImpl() {
         this(new UserLockoutDaoImpl(), new UserDaoImpl(), new UserSessionDaoImpl(), 
-             new AuditLogDaoImpl(), AuthConfigurationManager.getInstance());
+             new AuditLogDaoImpl(), null, AuthConfigurationManager.getInstance());
     }
     
     /**
@@ -54,10 +55,21 @@ public class UserLockoutServiceImpl implements UserLockoutService {
     public UserLockoutServiceImpl(UserLockoutDao userLockoutDao, UserDao userDao, 
                                  UserSessionDao userSessionDao, AuditLogDao auditLogDao, 
                                  AuthConfigProvider config) {
+        this(userLockoutDao, userDao, userSessionDao, auditLogDao, null, config);
+    }
+    
+    /**
+     * Parameterized constructor with AuditService for dependency injection.
+     */
+    public UserLockoutServiceImpl(UserLockoutDao userLockoutDao, UserDao userDao, 
+                                 UserSessionDao userSessionDao, AuditLogDao auditLogDao,
+                                 AuditService auditService, 
+                                 AuthConfigProvider config) {
         this.userLockoutDao = userLockoutDao;
         this.userDao = userDao;
         this.userSessionDao = userSessionDao;
         this.auditLogDao = auditLogDao;
+        this.auditService = auditService != null ? auditService : new AuditServiceImpl(auditLogDao);
         this.config = config;
     }
     
@@ -73,6 +85,8 @@ public class UserLockoutServiceImpl implements UserLockoutService {
         if (!userOpt.isPresent()) {
             throw new IllegalArgumentException("User not found with ID: " + userId);
         }
+        
+        User user = userOpt.get();
         
         // Create the lockout record
         UserLockout lockout = new UserLockout();
@@ -104,8 +118,7 @@ public class UserLockoutServiceImpl implements UserLockoutService {
         UserLockout createdLockout = userLockoutDao.create(lockout);
         
         // Create audit log
-        createAuditLog(userId, AuditEventType.OTHER, "Account locked: " + reason, 
-                      ipAddress, "user_lockouts", createdLockout.getId().toString(), reason);
+        auditService.recordAccountLockout(user, ipAddress, reason);
         
         // End all active sessions for the user
         endAllSessions(userId, "Account locked: " + reason);
@@ -242,16 +255,20 @@ public class UserLockoutServiceImpl implements UserLockoutService {
         boolean updated = userLockoutDao.updateLockoutEnd(lockout.getId(), now);
         
         if (updated) {
-            // Create audit log
-            String description = "Account unlocked: " + reason;
-            createAuditLog(userId, AuditEventType.OTHER, description, 
-                          ipAddress, "user_lockouts", lockout.getId().toString(), reason);
+            // Get the user and admin user (if provided)
+            Optional<User> userOpt = userDao.findById(userId);
+            Optional<User> adminOpt = adminUserId != null ? userDao.findById(adminUserId) : Optional.empty();
             
-            // If admin user is provided, create another audit log for the admin action
-            if (adminUserId != null) {
-                String adminDescription = "Admin unlocked account for user ID: " + userId + " - " + reason;
-                createAuditLog(adminUserId, AuditEventType.OTHER, adminDescription, 
-                              ipAddress, "user_lockouts", lockout.getId().toString(), reason);
+            if (userOpt.isPresent()) {
+                // Create audit log for the user
+                auditService.recordAccountUnlock(userOpt.get(), ipAddress, adminOpt.orElse(null), reason);
+                
+                // If admin user is provided and different from the user, create another audit log for the admin action
+                if (adminOpt.isPresent() && !adminOpt.get().getId().equals(userId)) {
+                    String adminDescription = "Admin unlocked account for user ID: " + userId + " - " + reason;
+                    auditService.recordSecurityEvent(AuditEventType.OTHER, adminOpt.get(), ipAddress, 
+                                                   adminDescription, "user_lockouts", lockout.getId().toString(), reason);
+                }
             }
             
             LOGGER.info("Account unlocked for user ID: " + userId);
@@ -315,17 +332,23 @@ public class UserLockoutServiceImpl implements UserLockoutService {
         boolean updated = userLockoutDao.updateLockoutEnd(lockout.getId(), newEndTime);
         
         if (updated) {
-            // Create audit log
-            String description = "Lockout extended by " + additionalMinutes + " minutes: " + reason;
-            createAuditLog(userId, AuditEventType.OTHER, description, 
-                          ipAddress, "user_lockouts", lockout.getId().toString(), reason);
+            // Get the user and admin user (if provided)
+            Optional<User> userOpt = userDao.findById(userId);
+            Optional<User> adminOpt = adminUserId != null ? userDao.findById(adminUserId) : Optional.empty();
             
-            // If admin user is provided, create another audit log for the admin action
-            if (adminUserId != null) {
-                String adminDescription = "Admin extended lockout for user ID: " + userId + 
-                                         " by " + additionalMinutes + " minutes - " + reason;
-                createAuditLog(adminUserId, AuditEventType.OTHER, adminDescription, 
-                              ipAddress, "user_lockouts", lockout.getId().toString(), reason);
+            if (userOpt.isPresent()) {
+                // Create audit log for the user
+                String description = "Lockout extended by " + additionalMinutes + " minutes: " + reason;
+                auditService.recordSecurityEvent(AuditEventType.OTHER, userOpt.get(), ipAddress, 
+                                               description, "user_lockouts", lockout.getId().toString(), reason);
+                
+                // If admin user is provided and different from the user, create another audit log for the admin action
+                if (adminOpt.isPresent() && !adminOpt.get().getId().equals(userId)) {
+                    String adminDescription = "Admin extended lockout for user ID: " + userId + 
+                                             " by " + additionalMinutes + " minutes - " + reason;
+                    auditService.recordSecurityEvent(AuditEventType.OTHER, adminOpt.get(), ipAddress, 
+                                                   adminDescription, "user_lockouts", lockout.getId().toString(), reason);
+                }
             }
             
             LOGGER.info("Lockout extended for user ID: " + userId + " by " + additionalMinutes + " minutes");
@@ -360,16 +383,22 @@ public class UserLockoutServiceImpl implements UserLockoutService {
         boolean updated = userLockoutDao.updateLockoutEnd(lockout.getId(), null);
         
         if (updated) {
-            // Create audit log
-            String description = "Lockout made permanent: " + reason;
-            createAuditLog(userId, AuditEventType.OTHER, description, 
-                          ipAddress, "user_lockouts", lockout.getId().toString(), reason);
+            // Get the user and admin user (if provided)
+            Optional<User> userOpt = userDao.findById(userId);
+            Optional<User> adminOpt = adminUserId != null ? userDao.findById(adminUserId) : Optional.empty();
             
-            // If admin user is provided, create another audit log for the admin action
-            if (adminUserId != null) {
-                String adminDescription = "Admin made lockout permanent for user ID: " + userId + " - " + reason;
-                createAuditLog(adminUserId, AuditEventType.OTHER, adminDescription, 
-                              ipAddress, "user_lockouts", lockout.getId().toString(), reason);
+            if (userOpt.isPresent()) {
+                // Create audit log for the user
+                String description = "Lockout made permanent: " + reason;
+                auditService.recordSecurityEvent(AuditEventType.OTHER, userOpt.get(), ipAddress, 
+                                               description, "user_lockouts", lockout.getId().toString(), reason);
+                
+                // If admin user is provided and different from the user, create another audit log for the admin action
+                if (adminOpt.isPresent() && !adminOpt.get().getId().equals(userId)) {
+                    String adminDescription = "Admin made lockout permanent for user ID: " + userId + " - " + reason;
+                    auditService.recordSecurityEvent(AuditEventType.OTHER, adminOpt.get(), ipAddress, 
+                                                   adminDescription, "user_lockouts", lockout.getId().toString(), reason);
+                }
             }
             
             LOGGER.info("Lockout made permanent for user ID: " + userId);
@@ -458,35 +487,14 @@ public class UserLockoutServiceImpl implements UserLockoutService {
             
             if (updated) {
                 // Create audit log
-                createAuditLog(userId, AuditEventType.SESSION_ENDED, "Session ended: " + reason, 
-                              session.getIpAddress(), "user_sessions", session.getId().toString(), reason);
+                Optional<User> userOpt = userDao.findById(userId);
+                if (userOpt.isPresent()) {
+                    auditService.recordLogout(userOpt.get(), session.getIpAddress(), session.getId().toString());
+                }
                 count++;
             }
         }
         
         return count;
-    }
-    
-    /**
-     * Create an audit log entry.
-     */
-    protected void createAuditLog(Integer userId, AuditEventType eventType, String eventDescription, 
-                                String ipAddress, String tableName, String recordId, String reason) {
-        try {
-            AuditLog auditLog = new AuditLog(eventType);
-            auditLog.setUserId(userId);
-            auditLog.setEventDescription(eventDescription);
-            auditLog.setIpAddress(ipAddress);
-            auditLog.setTableName(tableName);
-            auditLog.setRecordId(recordId);
-            auditLog.setReason(reason);
-            auditLog.setCreatedAt(new Timestamp(System.currentTimeMillis()));
-            
-            auditLogDao.create(auditLog);
-            
-            LOGGER.info("Audit log created: " + eventDescription);
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error creating audit log: " + eventDescription, e);
-        }
     }
 }

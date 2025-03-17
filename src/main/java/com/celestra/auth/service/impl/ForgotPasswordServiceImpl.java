@@ -13,6 +13,8 @@ import java.util.logging.Logger;
 
 import com.celestra.auth.config.AuthConfigurationManager;
 import com.celestra.auth.config.AuthConfigProvider;
+import com.celestra.auth.service.AuditService;
+import com.celestra.auth.service.impl.AuditServiceImpl;
 import com.celestra.auth.service.ForgotPasswordService;
 import com.celestra.auth.util.PasswordUtil;
 import com.celestra.dao.AuditLogDao;
@@ -46,6 +48,7 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
     private final PasswordHistoryDao passwordHistoryDao;
     private final UserSessionDao userSessionDao;
     private final AuditLogDao auditLogDao;
+    private final AuditService auditService;
     private final EmailService emailService;
     private final AuthConfigProvider authConfig;
     
@@ -58,6 +61,7 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
         this.passwordHistoryDao = new PasswordHistoryDaoImpl();
         this.userSessionDao = new UserSessionDaoImpl();
         this.auditLogDao = new AuditLogDaoImpl();
+        this.auditService = new AuditServiceImpl(this.auditLogDao);
         this.emailService = new JavaMailEmailService();
         this.authConfig = AuthConfigurationManager.getInstance();
     }
@@ -68,11 +72,18 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
     public ForgotPasswordServiceImpl(UserDao userDao, PasswordResetTokenDao passwordResetTokenDao,
             PasswordHistoryDao passwordHistoryDao, UserSessionDao userSessionDao,
             AuditLogDao auditLogDao, EmailService emailService, AuthConfigProvider authConfig) {
+        this(userDao, passwordResetTokenDao, passwordHistoryDao, userSessionDao, auditLogDao, null, emailService, authConfig);
+    }
+    
+    public ForgotPasswordServiceImpl(UserDao userDao, PasswordResetTokenDao passwordResetTokenDao,
+            PasswordHistoryDao passwordHistoryDao, UserSessionDao userSessionDao,
+            AuditLogDao auditLogDao, AuditService auditService, EmailService emailService, AuthConfigProvider authConfig) {
         this.userDao = userDao;
         this.passwordResetTokenDao = passwordResetTokenDao;
         this.passwordHistoryDao = passwordHistoryDao;
         this.userSessionDao = userSessionDao;
         this.auditLogDao = auditLogDao;
+        this.auditService = auditService != null ? auditService : new AuditServiceImpl(auditLogDao);
         this.emailService = emailService;
         this.authConfig = authConfig;
     }
@@ -110,7 +121,7 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
         passwordResetTokenDao.create(resetToken);
         
         // Create audit log
-        createAuditLog(user.getId(), ipAddress, "Password reset requested", metadata);
+        auditService.recordPasswordResetRequest(user, ipAddress);
         
         // Send password reset email
         try {
@@ -128,14 +139,19 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
         
         if (!tokenOpt.isPresent()) {
             // Create audit log for invalid token
-            createAuditLog(null, "Unknown", "Password reset token validation failed - token not found", null);
+            auditService.recordSecurityEvent(AuditEventType.OTHER, null, "Unknown", "Password reset token validation failed - token not found", "password_reset_tokens", "unknown", null);
             return false;
         }
 
         // Create audit log for token validation
-        createAuditLog(tokenOpt.get().getUserId(), "Unknown", tokenOpt.get().isValid() ? "Password reset token validated" : "Password reset token validation failed - token expired or used", null);
-        
         PasswordResetToken resetToken = tokenOpt.get();
+        User user = userDao.findById(resetToken.getUserId()).orElse(null);
+        String message = resetToken.isValid() ? 
+            "Password reset token validated" : 
+            "Password reset token validation failed - token expired or used";
+        
+        auditService.recordSecurityEvent(AuditEventType.OTHER, user, "Unknown", message, "password_reset_tokens", resetToken.getToken(), null);
+        
         return resetToken.isValid();
     }
     
@@ -146,7 +162,7 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
         
         if (!tokenOpt.isPresent()) {
             // Create audit log for invalid token attempt
-            createAuditLog(null, ipAddress, "Password reset attempted with invalid token", metadata);
+            auditService.recordSecurityEvent(AuditEventType.OTHER, null, ipAddress, "Password reset attempted with invalid token", "password_reset_tokens", "unknown", null);
             return false;
         }
         
@@ -155,7 +171,8 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
         // Check if token is valid
         if (!resetToken.isValid()) {
             // Create audit log for expired or used token attempt
-            createAuditLog(resetToken.getUserId(), ipAddress, "Password reset attempted with expired or used token", metadata);
+            User user = userDao.findById(resetToken.getUserId()).orElse(null);
+            auditService.recordSecurityEvent(AuditEventType.OTHER, user, ipAddress, "Password reset attempted with expired or used token", "password_reset_tokens", resetToken.getToken(), null);
             return false;
         }
         
@@ -164,7 +181,7 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
         
         if (!userOpt.isPresent()) {
             // Create audit log for user not found
-            createAuditLog(userId, ipAddress, "Password reset attempted for non-existent user", metadata);
+            auditService.recordSecurityEvent(AuditEventType.OTHER, null, ipAddress, "Password reset attempted for non-existent user", "users", userId.toString(), null);
             return false;
         }
         
@@ -180,7 +197,7 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
             // Note: This is not a perfect check since we're comparing hashed passwords with different salts
             if (passwordHistoryDao.existsByUserIdAndPasswordHash(userId, newPasswordHash)) {
                 // Create audit log for password reuse
-                createAuditLog(userId, ipAddress, "Password reset failed - password reused", metadata);
+                auditService.recordSecurityEvent(AuditEventType.OTHER, user, ipAddress, "Password reset failed - password reused", "users", userId.toString(), "Password reuse");
                 return false;
             }
         }
@@ -206,7 +223,7 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
         userSessionDao.deleteByUserId(userId);
         
         // Create audit log
-        createAuditLog(userId, ipAddress, "Password reset completed", metadata);
+        auditService.recordPasswordResetCompletion(user, ipAddress);
         
         // Send password changed notification email
         try {
@@ -225,7 +242,7 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
         
         if (!tokenOpt.isPresent() || !tokenOpt.get().isValid()) {
             // Create audit log for invalid token
-            createAuditLog(null, "Unknown", "Email requested for invalid password reset token", null);
+            auditService.recordSecurityEvent(AuditEventType.OTHER, null, "Unknown", "Email requested for invalid password reset token", "password_reset_tokens", token, null);
             return null;
         }
         
@@ -234,46 +251,14 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
         
         if (!userOpt.isPresent()) {
             // Create audit log for user not found
-            createAuditLog(resetToken.getUserId(), "Unknown", "Email requested for non-existent user", null);
+            auditService.recordSecurityEvent(AuditEventType.OTHER, null, "Unknown", "Email requested for non-existent user", "users", resetToken.getUserId().toString(), null);
             return null;
         }
-        createAuditLog(resetToken.getUserId(), "Unknown", "Email retrieved from valid password reset token", null);
         
-        return userOpt.get().getEmail();
-    }
-    
-    /**
-     * Create an audit log for password reset actions.
-     * 
-     * @param userId The ID of the user
-     * @param ipAddress The IP address of the client
-     * @param description The description of the action
-     * @param metadata Additional metadata about the action
-     * @throws SQLException if a database error occurs
-     */
-    private void createAuditLog(Integer userId, String ipAddress, String description, Map<String, String> metadata) 
-            throws SQLException {
-        // If userId is null, we still want to log the event but without associating it with a user
-        if (userId == null) {
-            LOGGER.info("Creating audit log without user ID: " + description);
-        }
+        User user = userOpt.get();
+        auditService.recordSecurityEvent(AuditEventType.OTHER, user, "Unknown", "Email retrieved from valid password reset token", "password_reset_tokens", token, null);
         
-        Map<String, String> auditMetadata = new HashMap<>();
-        if (metadata != null) {
-            auditMetadata.putAll(metadata);
-        }
-        
-        AuditLog auditLog = new AuditLog();
-        auditLog.setUserId(userId);
-        auditLog.setEventType(AuditEventType.OTHER); // Consider adding a specific event type for password reset
-        auditLog.setEventDescription(description);
-        auditLog.setIpAddress(ipAddress);
-        auditLog.setReason("Password reset flow");
-        auditLog.setTableName("users");
-        auditLog.setRecordId(userId != null ? userId.toString() : "unknown");
-        auditLog.setCreatedAt(new Timestamp(System.currentTimeMillis()));
-        
-        auditLogDao.create(auditLog);
+        return user.getEmail();
     }
     
     /**

@@ -16,6 +16,8 @@ import java.util.regex.Pattern;
 
 import com.celestra.auth.config.AuthConfigProvider;
 import com.celestra.auth.config.AuthConfigurationManager;
+import com.celestra.auth.service.AuditService;
+import com.celestra.auth.service.impl.AuditServiceImpl;
 import com.celestra.auth.service.RegistrationService;
 import com.celestra.auth.util.EmailUtil;
 import com.celestra.auth.util.PasswordUtil;
@@ -50,6 +52,7 @@ public class RegistrationServiceImpl implements RegistrationService {
     private final AuthConfigProvider config;
     private final EmailService emailService;
     private final AuditLogDao auditLogDao;
+    private final AuditService auditService;
     
     /**
      * Default constructor.
@@ -63,7 +66,7 @@ public class RegistrationServiceImpl implements RegistrationService {
      * Constructor with DAOs but default services.
      */
     public RegistrationServiceImpl(UserDao userDao, InvitationDao invitationDao, AuthConfigProvider config) {
-        this(userDao, invitationDao, config, new JavaMailEmailService(), new AuditLogDaoImpl());
+        this(userDao, invitationDao, config, new JavaMailEmailService(), new AuditLogDaoImpl(), null);
     }
     
     /**
@@ -71,11 +74,17 @@ public class RegistrationServiceImpl implements RegistrationService {
      */
     public RegistrationServiceImpl(UserDao userDao, InvitationDao invitationDao, AuthConfigProvider config, 
                                   EmailService emailService, AuditLogDao auditLogDao) {
+        this(userDao, invitationDao, config, emailService, auditLogDao, null);
+    }
+    
+    public RegistrationServiceImpl(UserDao userDao, InvitationDao invitationDao, AuthConfigProvider config, 
+                                  EmailService emailService, AuditLogDao auditLogDao, AuditService auditService) {
         this.userDao = userDao;
         this.invitationDao = invitationDao;
         this.config = config;
         this.emailService = emailService;
         this.auditLogDao = auditLogDao;
+        this.auditService = auditService != null ? auditService : new AuditServiceImpl(auditLogDao);
     }
     
     @Override
@@ -182,7 +191,7 @@ public class RegistrationServiceImpl implements RegistrationService {
                 }
                 
                 // Create audit log entry for account creation
-                createAuditLog(newUser.getId(), AuditEventType.OTHER, "User account created", ipAddress, "users", newUser.getId().toString(), null);
+                auditService.recordUserCreation(newUser, ipAddress, null);
             });
             createdUser = userDao.findByEmail(email).orElseThrow(() -> new SQLException("User creation failed"));
             
@@ -286,7 +295,7 @@ public class RegistrationServiceImpl implements RegistrationService {
                 invitationDao.update(finalInvitation);
                 
                 // Create audit log entry for account activation
-                createAuditLog(finalUser.getId(), AuditEventType.OTHER, "User account activated via invitation", ipAddress, "users", finalUser.getId().toString(), null);
+                auditService.recordSecurityEvent(AuditEventType.OTHER, finalUser, ipAddress, "User account activated via invitation", "users", finalUser.getId().toString(), null);
             });
             updatedUser = userDao.findById(user.getId()).orElseThrow(() -> new SQLException("User update failed"));
             
@@ -388,7 +397,7 @@ public class RegistrationServiceImpl implements RegistrationService {
                 invitationDao.update(finalInvitation);
                 
                 // Create audit log entry for email verification
-                createAuditLog(finalUser.getId(), AuditEventType.OTHER, "Email verified", null, "users", finalUser.getId().toString(), null);
+                auditService.recordSecurityEvent(AuditEventType.OTHER, finalUser, null, "Email verified", "users", finalUser.getId().toString(), null);
             });
             success = true;
             
@@ -488,29 +497,6 @@ public class RegistrationServiceImpl implements RegistrationService {
         }
     }
     
-    /**
-     * Create an audit log entry.
-     */
-    private void createAuditLog(Integer userId, AuditEventType eventType, String eventDescription, 
-                               String ipAddress, String tableName, String recordId, String reason) {
-        try {
-            AuditLog auditLog = new AuditLog(eventType);
-            auditLog.setUserId(userId);
-            auditLog.setEventDescription(eventDescription);
-            auditLog.setIpAddress(ipAddress);
-            auditLog.setTableName(tableName);
-            auditLog.setRecordId(recordId);
-            auditLog.setReason(reason);
-            auditLog.setCreatedAt(new Timestamp(System.currentTimeMillis()));
-            
-            auditLogDao.create(auditLog);
-            
-            LOGGER.info("Audit log created: " + eventDescription);
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error creating audit log: " + eventDescription, e);
-        }
-    }
-
     /**
      * Generate a random token for email verification.
      * 

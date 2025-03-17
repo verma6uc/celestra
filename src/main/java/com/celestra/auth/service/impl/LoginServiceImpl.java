@@ -15,6 +15,7 @@ import java.util.logging.Logger;
 
 import com.celestra.auth.config.AuthConfigProvider;
 import com.celestra.auth.config.AuthConfigurationManager;
+import com.celestra.auth.service.AuditService;
 import com.celestra.auth.service.FailedLoginTrackingService;
 import com.celestra.auth.service.LoginService;
 import com.celestra.auth.service.UserLockoutService;
@@ -27,6 +28,7 @@ import com.celestra.dao.UserDao;
 import com.celestra.dao.UserLockoutDao;
 import com.celestra.dao.UserSessionDao;
 import com.celestra.dao.impl.AuditLogDaoImpl;
+import com.celestra.auth.service.impl.AuditServiceImpl;
 import com.celestra.dao.impl.FailedLoginDaoImpl;
 import com.celestra.dao.impl.CompanyDaoImpl;
 import com.celestra.dao.impl.UserDaoImpl;
@@ -61,6 +63,7 @@ public class LoginServiceImpl implements LoginService {
     protected final UserLockoutDao userLockoutDao;
     protected final CompanyDao companyDao;
     protected final AuditLogDao auditLogDao;
+    protected final AuditService auditService;
     protected final AuthConfigProvider config;
     
     /**
@@ -75,10 +78,12 @@ public class LoginServiceImpl implements LoginService {
         this.userLockoutDao = new UserLockoutDaoImpl();
         this.companyDao = new CompanyDaoImpl();
         this.auditLogDao = new AuditLogDaoImpl();
+        this.auditService = new AuditServiceImpl(this.auditLogDao);
         this.config = AuthConfigurationManager.getInstance();
         this.failedLoginTrackingService = new FailedLoginTrackingServiceImpl(
             failedLoginDao, this.userDao, this.auditLogDao, this.config);
-        this.userLockoutService = new UserLockoutServiceImpl(this.userLockoutDao, this.userDao, this.userSessionDao, this.auditLogDao, this.config);
+        this.userLockoutService = new UserLockoutServiceImpl(this.userLockoutDao, this.userDao, 
+            this.userSessionDao, this.auditLogDao, this.config);
         // Other initializations will be done in the parameterized constructor
     }
     
@@ -86,17 +91,18 @@ public class LoginServiceImpl implements LoginService {
      * Parameterized constructor for dependency injection.
      */
     public LoginServiceImpl(UserDao userDao, UserSessionDao userSessionDao, FailedLoginDao failedLoginDao,
-                           UserLockoutDao userLockoutDao, CompanyDao companyDao, AuditLogDao auditLogDao, 
+                           UserLockoutDao userLockoutDao, CompanyDao companyDao, AuditLogDao auditLogDao,
+                            AuditService auditService,
                            AuthConfigProvider config) {
         this(userDao, userSessionDao, 
              new FailedLoginTrackingServiceImpl(failedLoginDao, userDao, auditLogDao, config),
              new UserLockoutServiceImpl(userLockoutDao, userDao, userSessionDao, auditLogDao, config),
-             failedLoginDao, userLockoutDao, companyDao, auditLogDao, config);
+             failedLoginDao, userLockoutDao, companyDao, auditLogDao, auditService, config);
     }
     
     public LoginServiceImpl(UserDao userDao, UserSessionDao userSessionDao, FailedLoginTrackingService failedLoginTrackingService,
-                           UserLockoutService userLockoutService, FailedLoginDao failedLoginDao, UserLockoutDao userLockoutDao, CompanyDao companyDao, 
-                           AuditLogDao auditLogDao, AuthConfigProvider config) {
+                           UserLockoutService userLockoutService, FailedLoginDao failedLoginDao, UserLockoutDao userLockoutDao, 
+                           CompanyDao companyDao, AuditLogDao auditLogDao, AuditService auditService, AuthConfigProvider config) {
         this.userDao = userDao;
         this.userSessionDao = userSessionDao;
         this.failedLoginTrackingService = failedLoginTrackingService;
@@ -105,6 +111,7 @@ public class LoginServiceImpl implements LoginService {
         this.userLockoutDao = userLockoutDao;
         this.companyDao = companyDao;
         this.auditLogDao = auditLogDao;
+        this.auditService = auditService != null ? auditService : new AuditServiceImpl(auditLogDao);
         this.config = config;
     }
     
@@ -138,14 +145,14 @@ public class LoginServiceImpl implements LoginService {
         // Check if the account is locked
         if (userLockoutService.isAccountLocked(user.getId())) {
             failedLoginTrackingService.recordFailedLogin(user, ipAddress, "Account is locked", metadata);
-            createAuditLog(user.getId(), AuditEventType.FAILED_LOGIN, "Login attempt on locked account", ipAddress, "users", user.getId().toString(), null);
+            auditService.recordFailedLogin(user, user.getEmail(), ipAddress, "Account is locked");
             return Optional.empty();
         }
         
         // Check if the account is active
         if (user.getStatus() != UserStatus.ACTIVE) {
             failedLoginTrackingService.recordFailedLogin(user, ipAddress, "Account is not active", metadata);
-            createAuditLog(user.getId(), AuditEventType.FAILED_LOGIN, "Login attempt on inactive account", ipAddress, "users", user.getId().toString(), null);
+            auditService.recordFailedLogin(user, user.getEmail(), ipAddress, "Account is not active");
             return Optional.empty();
         }
         
@@ -160,7 +167,7 @@ public class LoginServiceImpl implements LoginService {
                     "Company is not active";
                 
                 failedLoginTrackingService.recordFailedLogin(user, ipAddress, reason, metadata);
-                createAuditLog(user.getId(), AuditEventType.FAILED_LOGIN, "Login attempt with inactive company", ipAddress, "users", user.getId().toString(), null);
+                auditService.recordFailedLogin(user, user.getEmail(), ipAddress, reason);
                 return Optional.empty();
             }
         }
@@ -175,12 +182,12 @@ public class LoginServiceImpl implements LoginService {
                 userLockoutService.lockAccount(user.getId(), failedAttempts, "Too many failed login attempts", ipAddress);
             }
             
-            createAuditLog(user.getId(), AuditEventType.FAILED_LOGIN, "Invalid password", ipAddress, "users", user.getId().toString(), null);
+            auditService.recordFailedLogin(user, user.getEmail(), ipAddress, "Invalid password");
             return Optional.empty();
         }
         
         // Authentication successful
-        createAuditLog(user.getId(), AuditEventType.SUCCESSFUL_LOGIN, "Successful login", ipAddress, "users", user.getId().toString(), null);
+        auditService.recordSuccessfulLogin(user, ipAddress);
         return Optional.of(user);
     }
     
@@ -214,7 +221,7 @@ public class LoginServiceImpl implements LoginService {
         UserSession createdSession = userSessionDao.create(session);
         
         // Create audit log
-        createAuditLog(userId, AuditEventType.SESSION_STARTED, "Session created", ipAddress, "user_sessions", createdSession.getId().toString(), null);
+        auditService.recordSecurityEvent(AuditEventType.SESSION_STARTED, userDao.findById(userId).orElse(null), ipAddress, "Session created", "user_sessions", createdSession.getId().toString(), null);
         
         return createdSession;
     }
@@ -289,8 +296,10 @@ public class LoginServiceImpl implements LoginService {
         
         if (updated) {
             // Create audit log
-            createAuditLog(session.getUserId(), AuditEventType.SESSION_ENDED, "Session ended: " + reason, 
-                          session.getIpAddress(), "user_sessions", session.getId().toString(), reason);
+           Optional<User> userOpt = userDao.findById(session.getUserId());
+            if (userOpt.isPresent()) {
+                auditService.recordLogout(userOpt.get(), session.getIpAddress(), session.getId().toString());
+            }
         }
         
         return updated;
@@ -347,29 +356,6 @@ public class LoginServiceImpl implements LoginService {
     public int getRecentFailedLoginCount(String ipAddress, int minutes) throws SQLException {
         // Delegate to the FailedLoginTrackingService
         return failedLoginTrackingService.getRecentFailedLoginCountByIp(ipAddress, minutes);
-    }
-    
-    /**
-     * Create an audit log entry.
-     */
-    protected void createAuditLog(Integer userId, AuditEventType eventType, String eventDescription, 
-                               String ipAddress, String tableName, String recordId, String reason) {
-        try {
-            AuditLog auditLog = new AuditLog(eventType);
-            auditLog.setUserId(userId);
-            auditLog.setEventDescription(eventDescription);
-            auditLog.setIpAddress(ipAddress);
-            auditLog.setTableName(tableName);
-            auditLog.setRecordId(recordId);
-            auditLog.setReason(reason);
-            auditLog.setCreatedAt(new Timestamp(System.currentTimeMillis()));
-            
-            auditLogDao.create(auditLog);
-            
-            LOGGER.info("Audit log created: " + eventDescription);
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Error creating audit log: " + eventDescription, e);
-        }
     }
     
     /**
