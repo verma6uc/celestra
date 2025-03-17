@@ -595,4 +595,4 @@ public class LoginServiceImplTest {
         // Verify interactions
         verify(failedLoginDao).countRecentByIpAddress(ipAddress, minutes);
     }
-}
+}   
