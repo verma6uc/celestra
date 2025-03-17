@@ -10,13 +10,13 @@
   - **Why**: Enums provide type-safety for fixed sets of values in the database (like status types, categories, etc.).
   - **What**: For each enumerated type defined in the schema file, create a corresponding Java enum class in the enums package. Each enum should accurately represent the possible values from the schema.
 
-- [ ] **Create POJO (Plain Old Java Object) classes in the model package**
+- [x] **Create POJO (Plain Old Java Object) classes in the model package**
   - **Why**: POJOs represent database tables as Java objects, allowing for object-oriented manipulation of database data.
   - **What**: Create a Java class for each table in the schema. Each class should have:
     - Private fields corresponding to table columns with appropriate data types
     - Getters and setters for each field
     - Constructors (default and parameterized)
-    - toString(), equals(), and hashCode() methods as needed
+    - toString(), equals(), and hashCode() methods
 
 - [ ] **Verify completeness of enums and POJOs**
   - **Why**: Ensure all database entities are properly represented in the Java model before proceeding.
