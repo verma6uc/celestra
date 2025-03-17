@@ -57,7 +57,7 @@
     - Perform bulk inserts while maintaining referential integrity
     - Include progress reporting and error handling
 
-- [x] **Create master seeding coordinator class**
+- [ ] **Create master seeding coordinator class**
   - **Why**: A coordinator ensures tables are seeded in the correct order and provides a unified interface for the seeding process.
   - **What**: Implement a coordinator class that:
     - Executes individual seeding classes in the proper sequence
@@ -68,7 +68,7 @@
 
 ## Execution and Verification
 
-- [x] **Execute seeding process for each table**
+- [ ] **Execute seeding process for each table**
   - **Why**: Seeding tables one by one allows for better control and troubleshooting.
   - **What**: Run each seeding class individually:
     - Start with independent tables
