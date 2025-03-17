@@ -3,6 +3,9 @@ package com.celestra.seeding;
 import com.celestra.db.DatabaseUtil;
 import com.celestra.seeding.seeders.CompanySeeder;
 import com.celestra.seeding.seeders.KnowledgeTypeSeeder;
+import com.celestra.seeding.seeders.AgentSeeder;
+import com.celestra.seeding.seeders.KnowledgeBaseSeeder;
+import com.celestra.seeding.seeders.UserSeeder;
 import com.celestra.seeding.util.FakerUtil;
 import com.celestra.seeding.util.EnumUtil;
 import com.celestra.seeding.util.PasswordUtil;
@@ -10,6 +13,9 @@ import com.celestra.seeding.util.TimestampUtil;
 import java.util.List;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.HashMap;
 import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -43,6 +49,9 @@ public class DataSeeder {
     // Store generated IDs for relationships
     private static List<Integer> companyIds;
     private static List<Integer> knowledgeTypeIds;
+    private static List<Integer> userIds;
+    private static List<Integer> agentIds;
+    private static List<Integer> knowledgeBaseIds;
     /**
      * Main method to run the data seeding process.
      * 
@@ -162,8 +171,11 @@ public class DataSeeder {
      */
     private static void seedUsers(Connection connection) throws SQLException {
         LOGGER.info("Seeding users table...");
-        // TODO: Implement user seeding
-        LOGGER.info("Seeded " + NUM_USERS + " users.");
+        
+        UserSeeder userSeeder = new UserSeeder(connection, NUM_USERS, companyIds);
+        userIds = userSeeder.seed();
+        
+        LOGGER.info("Seeded " + userIds.size() + " users.");
     }
     
     /**
@@ -174,8 +186,37 @@ public class DataSeeder {
      */
     private static void seedAgents(Connection connection) throws SQLException {
         LOGGER.info("Seeding agents table...");
-        // TODO: Implement agent seeding
-        LOGGER.info("Seeded " + NUM_AGENTS + " agents.");
+        
+        // Get company verticals for agent type assignment
+        HashMap<Integer, String> companyVerticals = getCompanyVerticals(connection);
+        
+        AgentSeeder agentSeeder = new AgentSeeder(connection, NUM_AGENTS, companyIds, companyVerticals);
+        agentIds = agentSeeder.seed();
+        
+        LOGGER.info("Seeded " + agentIds.size() + " agents.");
+    }
+    
+    /**
+     * Get the vertical for each company.
+     * 
+     * @param connection Database connection
+     * @return Map of company IDs to their verticals
+     * @throws SQLException If a database error occurs
+     */
+    private static HashMap<Integer, String> getCompanyVerticals(Connection connection) throws SQLException {
+        HashMap<Integer, String> companyVerticals = new HashMap<>();
+        
+        String sql = "SELECT id, vertical FROM companies";
+        try (PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
+            
+            while (resultSet.next()) {
+                int companyId = resultSet.getInt("id");
+                String vertical = resultSet.getString("vertical");
+                companyVerticals.put(companyId, vertical);
+            }
+        }
+        return companyVerticals;
     }
     
     /**
@@ -186,8 +227,14 @@ public class DataSeeder {
      */
     private static void seedKnowledgeBases(Connection connection) throws SQLException {
         LOGGER.info("Seeding knowledge_bases table...");
-        // TODO: Implement knowledge base seeding
-        LOGGER.info("Seeded " + NUM_KNOWLEDGE_BASES + " knowledge bases.");
+        
+        // Get company verticals for knowledge base type assignment
+        HashMap<Integer, String> companyVerticals = getCompanyVerticals(connection);
+        
+        KnowledgeBaseSeeder knowledgeBaseSeeder = new KnowledgeBaseSeeder(connection, NUM_KNOWLEDGE_BASES, companyIds, companyVerticals);
+        knowledgeBaseIds = knowledgeBaseSeeder.seed();
+        
+        LOGGER.info("Seeded " + knowledgeBaseIds.size() + " knowledge bases.");
     }
     
     /**

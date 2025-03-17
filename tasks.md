@@ -48,7 +48,7 @@
     - Perform bulk inserts for efficiency
     - Include progress reporting and error handling
 
-- [ ] **Implement seeding classes for dependent tables**
+- [x] **Implement seeding classes for dependent tables**
   - **Why**: Tables with foreign key dependencies must be seeded after their parent tables.
   - **What**: Create Java classes that:
     - Query for existing IDs from parent tables
