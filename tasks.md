@@ -1,103 +1,188 @@
-# AI Utilities and Email Service Tasks
+# Authentication Module Implementation Tasks
 
-## AI Integration Configuration
+## Completed Tasks
 
-- [x] **Create shared configuration file for AI APIs**
-  - **Why**: A single configuration file for both AI services simplifies management and ensures consistent settings.
-  - **What**: Create a properties file to store API keys and configuration parameters for both OpenAI and Claude services, including:
-    - API keys for both services
-    - Model identifiers ("o3-mini-2025-01-31" for OpenAI and "claude-3-7-sonnet-20250219" for Claude)
-    - Token limits (64000 for OpenAI and 8192 for Claude)
-    - Common parameters like temperature, top_p, etc.
+- [x] **Add Email Tracking to Failed Login Attempts**
+  - **Why**: Tracking email addresses for failed login attempts improves security monitoring, especially when a user ID is not available.
+  - **What**: Implemented changes to:
+    - Updated the database schema to add an email column to the failed_logins table
+    - Modified the FailedLogin model to include the email field
+    - Updated the FailedLoginDao interface and implementation to support finding and counting by email
+    - Updated the data seeder to populate the email field for failed login records
 
-## OpenAI Integration
+## Initial Analysis and Setup
 
-- [x] **Implement OpenAI utility class for chat completion**
-  - **Why**: A dedicated utility class encapsulates OpenAI API interactions for chat completion, providing a clean interface for the rest of the application.
-  - **What**: Create a utility class that:
-    - Loads configuration from the shared properties file
-    - Establishes connection to OpenAI API using the specified key
-    - Focuses exclusively on chat completion functionality using the "o3-mini-2025-01-31" model
-    - Respects the 64000 token limit for this model
-    - Implements retry logic with hardcoded retry attempts (e.g., 3 retries) for transient errors
-    - Handles different error scenarios including rate limits, authentication failures, invalid requests, and server errors
-    - Provides methods to customize request parameters (temperature, max tokens, etc.)
-    - Implements proper resource management and cleanup
+- [ ] **Review Database Schema**
+  - **Why**: A thorough understanding of the database structure is essential before implementing authentication features.
+  - **What**: Carefully review the SQL schema file to understand:
+    - User table structure and related tables (invitations, sessions, password_history, etc.)
+    - Security-related tables (audit_logs, failed_logins, user_lockouts)
+    - Enum types for status tracking
+    - Relationships between tables and foreign key constraints
+    - Indexes and performance considerations
 
-## Claude Integration
+- [ ] **Create Authentication Configuration**
+  - **Why**: Centralizing authentication settings makes the system more maintainable and configurable.
+  - **What**: Create a configuration file/class that defines:
+    - Password complexity requirements
+    - Lockout thresholds and durations
+    - Session expiration timeframes
+    - Token expiration settings (for password reset, invitations)
+    - Security-related timeouts
 
-- [x] **Implement Claude utility class for chat completion**
-  - **Why**: A dedicated utility for Claude API interactions makes it easier to swap between AI services and maintains clean separation of concerns.
-  - **What**: Create a utility class that:
-    - Loads configuration from the shared properties file
-    - Establishes connection to Claude API using the specified key
-    - Focuses exclusively on chat completion functionality using the "claude-3-7-sonnet-20250219" model
-    - Respects the 8192 token limit for this model
-    - Implements retry logic with hardcoded retry attempts for handling transient errors
-    - Handles Claude-specific error scenarios including rate limits, authentication failures, invalid requests, and server errors
-    - Provides methods to customize request parameters (temperature, max tokens, etc.)
-    - Implements proper response parsing and extraction
-    - Ensures efficient resource management
+## Core User Management
 
-## AI Utilities Testing
+- [ ] **Extend Existing User DAO**
+  - **Why**: The existing UserDAO needs to be enhanced to support authentication-specific operations.
+  - **What**: Add methods to the existing UserDAO for:
+    - Authentication-specific queries
+    - Status validation and updates
+    - Role checking and management
+    - Password handling and verification
+    - Session-related user operations
 
-- [x] **Create test cases for OpenAI chat completion utility**
-  - **Why**: Testing ensures the OpenAI integration functions correctly and handles errors appropriately.
-  - **What**: Create a test class that:
-    - Tests successful chat completion API calls
-    - Tests retry mechanism by simulating transient failures
-    - Tests error handling for various error types (rate limits, authentication, etc.)
-    - Verifies proper response parsing
-    - Tests with different conversation contexts
-    - Verifies handling of token limit (64000) edge cases
+- [ ] **Implement Registration Service**
+  - **Why**: A dedicated service encapsulates the business logic for user registration.
+  - **What**: Create a registration service that:
+    - Validates user input
+    - Enforces password complexity rules
+    - Handles different registration flows (direct, invitation-based)
+    - Creates appropriate user records with proper role assignment
+    - Associates users with companies (except for super admins)
+    - Generates audit logs for account creation
 
-- [x] **Create test cases for Claude chat completion utility**
-  - **Why**: Testing ensures the Claude integration functions correctly and handles errors appropriately.
-  - **What**: Create a test class that:
-    - Tests successful chat completion API calls
-    - Tests retry mechanism by simulating transient failures
-    - Tests error handling for various error types
-    - Verifies proper response parsing
-    - Tests with different conversation contexts
-    - Verifies handling of token limit (8192) edge cases
+## Authentication Implementation
 
-## Email Service
+- [ ] **Implement Password Security Utilities**
+  - **Why**: Proper password handling is critical for system security.
+  - **What**: Create utilities for:
+    - Secure password hashing with modern algorithms
+    - Password validation against complexity requirements
+    - Password history checking to prevent reuse
+    - Password strength evaluation
 
-- [x] **Create separate email configuration file**
-  - **Why**: Keeping email configuration in a dedicated properties file improves security and allows for independent updates to email settings.
-  - **What**: Create a separate properties file specifically for email configuration that includes:
-    - SMTP server host (email-smtp.ap-south-1.amazonaws.com)
-    - SMTP port (465)
-    - Authentication settings (enabled)
-    - SSL settings (enabled)
-    - Username (AKIAXWWAENHRKEXWAEU2)
-    - Password (BJ+IiVs1NLQg/cOoWTF3Woedp1prO9crMRH0ZK2Cv2HY)
-    - From address (no-reply@leucinetech.com)
+- [ ] **Implement Login Service**
+  - **Why**: Centralizing login logic ensures consistent security policies.
+  - **What**: Create a login service that:
+    - Validates credentials
+    - Handles authentication failures
+    - Tracks failed login attempts
+    - Implements account lockout logic
+    - Creates user sessions
+    - Generates appropriate audit logs
+    - Handles IP address tracking
 
-- [x] **Implement email configuration utility**
-  - **Why**: A dedicated configuration utility ensures proper loading and validation of email settings.
-  - **What**: Create a utility class that:
-    - Loads the email configuration from the separate properties file
-    - Validates the required properties are present
-    - Provides a clean API for accessing the email configuration values
-    - Handles configuration changes at runtime if needed
+- [ ] **Implement Session Management**
+  - **Why**: Proper session handling is essential for maintaining authenticated state securely.
+  - **What**: Create session management functionality that:
+    - Generates secure session tokens
+    - Creates session records in the database
+    - Sets appropriate expiration times
+    - Provides validation methods for active sessions
+    - Handles session termination
+    - Note: No automatic cleanup of expired sessions is required
 
-- [x] **Implement email sending service**
-  - **Why**: A dedicated service for email functionality provides a clean interface and reusable component for the application.
-  - **What**: Create an email service that:
-    - Uses the email configuration utility to get SMTP connection details
-    - Provides methods for sending plain text and HTML emails
-    - Supports attachments
-    - Handles multiple recipients (To, CC, BCC)
-    - Implements error handling for various email sending failures
-    - Includes logging for email operations
-    - Properly manages resources and connections
+## Password Recovery Flows
 
-- [x] **Create test cases for email service**
-  - **Why**: Testing ensures the email functionality works correctly before being used in production.
-  - **What**: Create a test class that:
-    - Tests email sending to verify correct configuration, using "nupur.bhaisare@leucinetech.com" as the test recipient email address
-    - Tests different email formats (plain text, HTML)
-    - Tests with attachments
-    - Tests with multiple recipients (including "nupur.bhaisare@leucinetech.com" as the primary recipient)
-    - Verifies error handling for connection failures, invalid addresses, etc.
+- [ ] **Implement Forgot Password Service**
+  - **Why**: Users need a secure way to recover access when they forget their password.
+  - **What**: Create a service that:
+    - Handles forgot password requests by email
+    - Generates secure reset tokens with appropriate expiration
+    - Sends email with a password reset link
+    - Validates user existence without revealing account information
+    - Records appropriate audit logs
+
+- [ ] **Implement Reset Password Service**
+  - **Why**: A secure password reset process is needed to complete the recovery flow.
+  - **What**: Create a service that:
+    - Validates reset tokens
+    - Enforces password history policies
+    - Updates user passwords securely
+    - Invalidates the used token
+    - Logs all password changes
+    - Optionally terminates existing sessions
+    - Sends password changed notifications
+
+## Security Infrastructure
+
+- [ ] **Implement Failed Login Tracking**
+  - **Why**: Tracking failed attempts helps prevent brute force attacks.
+  - **What**: Create functionality that:
+    - Records failed login attempts
+    - Associates attempts with users when possible
+    - Tracks IP addresses
+    - Implements threshold detection
+    - Triggers account lockouts when needed
+
+- [ ] **Implement User Lockout System**
+  - **Why**: Account lockouts protect against persistent attack attempts.
+  - **What**: Create a lockout system that:
+    - Creates lockout records based on security policy
+    - Sets appropriate temporary or permanent lockouts
+    - Provides methods to check lockout status
+    - Implements automatic and manual unlocking procedures
+    - Records lockout events in audit logs
+
+- [ ] **Implement Comprehensive Audit Logging**
+  - **Why**: Audit trails are essential for security monitoring and compliance.
+  - **What**: Create audit logging that:
+    - Records all authentication events (login, logout, failed attempts)
+    - Tracks password changes and resets
+    - Documents account status changes
+    - Implements digital signatures for log integrity
+    - Records detailed before/after values for critical changes
+
+## Invitation System
+
+- [ ] **Implement Invitation Service**
+  - **Why**: Invitations provide a controlled way to onboard new users.
+  - **What**: Create an invitation service that:
+    - Generates secure invitation tokens
+    - Sets appropriate expiration times
+    - Updates invitation status throughout the process
+    - Handles invitation cancellation
+    - Provides resend capabilities
+    - Records invitation events in audit logs
+
+- [ ] **Implement Invitation Acceptance Flow**
+  - **Why**: A secure acceptance flow completes the invitation process.
+  - **What**: Create functionality that:
+    - Validates invitation tokens
+    - Guides users through account setup
+    - Enforces password requirements
+    - Activates user accounts upon completion
+    - Updates invitation status
+    - Records acceptance in audit logs
+
+## Authorization System
+
+- [ ] **Implement Role-Based Authorization**
+  - **Why**: Different user types need different access levels.
+  - **What**: Create an authorization system that:
+    - Defines permissions for each role
+    - Provides methods to check permissions
+    - Implements access control helpers
+    - Separates super admin capabilities from other roles
+    - Handles company-specific permissions
+
+- [ ] **Create Security Filter/Interceptor**
+  - **Why**: A centralized security filter enforces authentication and authorization rules.
+  - **What**: Create a filter/interceptor that:
+    - Validates active sessions
+    - Checks user permissions against requested resources
+    - Handles authentication failures
+    - Redirects to login when needed
+    - Provides security context to application components
+
+## Testing
+
+- [ ] **Create Authentication Service Tests**
+  - **Why**: Testing ensures the authentication system works correctly and securely.
+  - **What**: Create comprehensive tests for:
+    - User registration flows
+    - Login processes
+    - Password recovery
+    - Session management
+    - Lockout mechanisms
+    - Role-based access control
