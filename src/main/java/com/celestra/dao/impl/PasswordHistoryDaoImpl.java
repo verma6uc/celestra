@@ -6,8 +6,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.util.List;
 
 import com.celestra.dao.AbstractBaseDao;
@@ -61,7 +59,7 @@ public class PasswordHistoryDaoImpl extends AbstractBaseDao<PasswordHistory, Int
     private static final String DELETE_OLDEST_BY_USER_ID_SQL = 
             "DELETE FROM " + TABLE_NAME + " WHERE " + ID_COLUMN + " IN (" + 
             "SELECT id FROM " + TABLE_NAME + " WHERE " + USER_ID_COLUMN + " = ? " + 
-            "ORDER BY " + CREATED_AT_COLUMN + " DESC LIMIT ?, 1000000)";
+            "ORDER BY " + CREATED_AT_COLUMN + " DESC OFFSET ? LIMIT 1000000)";
     
     @Override
     protected String getTableName() {
@@ -90,11 +88,7 @@ public class PasswordHistoryDaoImpl extends AbstractBaseDao<PasswordHistory, Int
         passwordHistory.setId(rs.getInt(ID_COLUMN));
         passwordHistory.setUserId(rs.getInt(USER_ID_COLUMN));
         passwordHistory.setPasswordHash(rs.getString(PASSWORD_HASH_COLUMN));
-        
-        Timestamp createdAtTimestamp = rs.getTimestamp(CREATED_AT_COLUMN);
-        if (createdAtTimestamp != null) {
-            passwordHistory.setCreatedAt(createdAtTimestamp.toInstant().atOffset(OffsetDateTime.now().getOffset()));
-        }
+        passwordHistory.setCreatedAt(rs.getTimestamp(CREATED_AT_COLUMN));
         
         return passwordHistory;
     }
@@ -105,7 +99,7 @@ public class PasswordHistoryDaoImpl extends AbstractBaseDao<PasswordHistory, Int
         ps.setString(2, passwordHistory.getPasswordHash());
         
         if (passwordHistory.getCreatedAt() != null) {
-            ps.setTimestamp(3, Timestamp.from(passwordHistory.getCreatedAt().toInstant()));
+            ps.setTimestamp(3, passwordHistory.getCreatedAt());
         } else {
             ps.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
         }
@@ -117,7 +111,7 @@ public class PasswordHistoryDaoImpl extends AbstractBaseDao<PasswordHistory, Int
         ps.setString(2, passwordHistory.getPasswordHash());
         
         if (passwordHistory.getCreatedAt() != null) {
-            ps.setTimestamp(3, Timestamp.from(passwordHistory.getCreatedAt().toInstant()));
+            ps.setTimestamp(3, passwordHistory.getCreatedAt());
         } else {
             ps.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
         }
@@ -210,11 +204,11 @@ public class PasswordHistoryDaoImpl extends AbstractBaseDao<PasswordHistory, Int
     }
     
     @Override
-    public int deleteOlderThan(OffsetDateTime olderThan) throws SQLException {
+    public int deleteOlderThan(Timestamp olderThan) throws SQLException {
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(DELETE_OLDER_THAN_SQL)) {
             
-            ps.setTimestamp(1, Timestamp.from(olderThan.toInstant()));
+            ps.setTimestamp(1, olderThan);
             
             return ps.executeUpdate();
         }

@@ -1,6 +1,6 @@
 package com.celestra.model;
 
-import java.time.OffsetDateTime;
+import java.sql.Timestamp;
 import java.util.Objects;
 
 /**
@@ -11,7 +11,7 @@ public class PasswordHistory {
     private Integer id;
     private Integer userId;
     private String passwordHash;
-    private OffsetDateTime createdAt;
+    private Timestamp createdAt;
     
     // Reference to the associated user (not stored in database)
     private User user;
@@ -42,7 +42,7 @@ public class PasswordHistory {
      * @param passwordHash The hashed version of previous password
      * @param createdAt The timestamp when this password was initially set
      */
-    public PasswordHistory(Integer id, Integer userId, String passwordHash, OffsetDateTime createdAt) {
+    public PasswordHistory(Integer id, Integer userId, String passwordHash, Timestamp createdAt) {
         this.id = id;
         this.userId = userId;
         this.passwordHash = passwordHash;
@@ -75,11 +75,11 @@ public class PasswordHistory {
         this.passwordHash = passwordHash;
     }
 
-    public OffsetDateTime getCreatedAt() {
+    public Timestamp getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(OffsetDateTime createdAt) {
+    public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }
     

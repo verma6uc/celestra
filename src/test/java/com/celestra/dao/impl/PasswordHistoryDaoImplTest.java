@@ -3,7 +3,7 @@ package com.celestra.dao.impl;
 import static org.junit.Assert.*;
 
 import java.sql.SQLException;
-import java.time.OffsetDateTime;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,19 +39,26 @@ public class PasswordHistoryDaoImplTest extends BaseDaoTest {
         // Clean up any existing test data
         cleanupTestData();
         
-        // Insert test user
+        // First insert test company to satisfy foreign key constraints
+        executeSQL("INSERT INTO companies (id, name, description, size, vertical, status, created_at, updated_at) " +
+                   "VALUES (1, 'Test Company 1', 'Test Company Description 1', 'SMALL'::company_size, 'TECH'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW())");
+        
+        // Insert test users
         executeSQL("INSERT INTO users (id, company_id, role, email, name, password_hash, status, created_at, updated_at) " +
-                   "VALUES (999, 1, 'REGULAR_USER', 'testuser@test.com', 'Test User', 'hash123', 'ACTIVE', NOW(), NOW())");
+                   "VALUES (999, 1, 'REGULAR_USER'::user_role, 'testuser@test.com', 'Test User', 'hash123', 'ACTIVE'::user_status, NOW(), NOW())");
+        
+        executeSQL("INSERT INTO users (id, company_id, role, email, name, password_hash, status, created_at, updated_at) " +
+                   "VALUES (998, 1, 'REGULAR_USER'::user_role, 'testuser2@test.com', 'Test User 2', 'hash456', 'ACTIVE'::user_status, NOW(), NOW())");
         
         // Insert test password history entries
         executeSQL("INSERT INTO password_history (user_id, password_hash, created_at) " +
-                   "VALUES (999, 'oldhash1', DATE_SUB(NOW(), INTERVAL 30 DAY))");
+                   "VALUES (999, 'oldhash1', NOW() - INTERVAL '30 days')");
         
         executeSQL("INSERT INTO password_history (user_id, password_hash, created_at) " +
-                   "VALUES (999, 'oldhash2', DATE_SUB(NOW(), INTERVAL 20 DAY))");
+                   "VALUES (999, 'oldhash2', NOW() - INTERVAL '20 days')");
         
         executeSQL("INSERT INTO password_history (user_id, password_hash, created_at) " +
-                   "VALUES (999, 'oldhash3', DATE_SUB(NOW(), INTERVAL 10 DAY))");
+                   "VALUES (999, 'oldhash3', NOW() - INTERVAL '10 days')");
         
         executeSQL("INSERT INTO password_history (user_id, password_hash, created_at) " +
                    "VALUES (999, 'currenthash', NOW())");
@@ -59,8 +66,9 @@ public class PasswordHistoryDaoImplTest extends BaseDaoTest {
     
     @Override
     protected void cleanupTestData() throws SQLException {
-        executeSQL("DELETE FROM password_history WHERE user_id = 999 OR password_hash LIKE 'test%'");
-        executeSQL("DELETE FROM users WHERE email = 'testuser@test.com'");
+        executeSQL("DELETE FROM password_history WHERE user_id IN (999, 998) OR password_hash LIKE 'test%'");
+        executeSQL("DELETE FROM users WHERE email IN ('testuser@test.com', 'testuser2@test.com')");
+        executeSQL("DELETE FROM companies WHERE id = 1");
     }
     
     /**
@@ -72,7 +80,7 @@ public class PasswordHistoryDaoImplTest extends BaseDaoTest {
         PasswordHistory passwordHistory = new PasswordHistory();
         passwordHistory.setUserId(999);
         passwordHistory.setPasswordHash("testhash1");
-        passwordHistory.setCreatedAt(OffsetDateTime.now());
+        passwordHistory.setCreatedAt(new Timestamp(System.currentTimeMillis()));
         
         PasswordHistory createdPasswordHistory = passwordHistoryDao.create(passwordHistory);
         
@@ -130,7 +138,7 @@ public class PasswordHistoryDaoImplTest extends BaseDaoTest {
         PasswordHistory passwordHistory = new PasswordHistory();
         passwordHistory.setUserId(999);
         passwordHistory.setPasswordHash("testhash2");
-        passwordHistory.setCreatedAt(OffsetDateTime.now());
+        passwordHistory.setCreatedAt(new Timestamp(System.currentTimeMillis()));
         
         PasswordHistory createdPasswordHistory = passwordHistoryDao.create(passwordHistory);
         
@@ -156,7 +164,7 @@ public class PasswordHistoryDaoImplTest extends BaseDaoTest {
         PasswordHistory passwordHistory = new PasswordHistory();
         passwordHistory.setUserId(999);
         passwordHistory.setPasswordHash("testhash3");
-        passwordHistory.setCreatedAt(OffsetDateTime.now());
+        passwordHistory.setCreatedAt(new Timestamp(System.currentTimeMillis()));
         
         PasswordHistory createdPasswordHistory = passwordHistoryDao.create(passwordHistory);
         
@@ -228,11 +236,11 @@ public class PasswordHistoryDaoImplTest extends BaseDaoTest {
      */
     @Test
     public void testDeleteByUserId() throws SQLException {
-        // Create a new password history entry for a different user
+        // Create a new password history entry for user 998
         PasswordHistory passwordHistory = new PasswordHistory();
         passwordHistory.setUserId(998);
         passwordHistory.setPasswordHash("testhash4");
-        passwordHistory.setCreatedAt(OffsetDateTime.now());
+        passwordHistory.setCreatedAt(new Timestamp(System.currentTimeMillis()));
         
         PasswordHistory createdPasswordHistory = passwordHistoryDao.create(passwordHistory);
         
@@ -252,7 +260,7 @@ public class PasswordHistoryDaoImplTest extends BaseDaoTest {
     @Test
     public void testDeleteOlderThan() throws SQLException {
         // Delete password history entries older than 15 days
-        OffsetDateTime cutoffDate = OffsetDateTime.now().minusDays(15);
+        Timestamp cutoffDate = new Timestamp(System.currentTimeMillis() - 15 * 24 * 60 * 60 * 1000L);
         int deleted = passwordHistoryDao.deleteOlderThan(cutoffDate);
         
         // Verify old password history entries were deleted
@@ -263,7 +271,7 @@ public class PasswordHistoryDaoImplTest extends BaseDaoTest {
         for (PasswordHistory entry : allEntries) {
             if (entry.getUserId() == 999) {
                 assertTrue("Remaining entries should be newer than cutoff date", 
-                           entry.getCreatedAt().isAfter(cutoffDate));
+                           entry.getCreatedAt().after(cutoffDate));
             }
         }
     }

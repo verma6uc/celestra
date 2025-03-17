@@ -1,7 +1,7 @@
 package com.celestra.dao;
 
 import java.sql.SQLException;
-import java.time.OffsetDateTime;
+import java.sql.Timestamp;
 import java.util.List;
 
 import com.celestra.model.PasswordHistory;
@@ -56,7 +56,7 @@ public interface PasswordHistoryDao extends BaseDao<PasswordHistory, Integer> {
      * @return The number of deleted entries
      * @throws SQLException if a database access error occurs
      */
-    int deleteOlderThan(OffsetDateTime olderThan) throws SQLException;
+    int deleteOlderThan(Timestamp olderThan) throws SQLException;
     
     /**
      * Delete the oldest password history entries for a user, keeping only the most recent ones.
