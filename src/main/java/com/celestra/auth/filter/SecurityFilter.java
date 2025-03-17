@@ -66,11 +66,25 @@ public class SecurityFilter implements Filter {
     
     private LoginService loginService;
     
+    /**
+     * Default constructor.
+     */
+    public SecurityFilter() {
+        // Default constructor
+    }
+    
+    /**
+     * Constructor with LoginService for testing.
+     */
+    public SecurityFilter(LoginService loginService) {
+        this.loginService = loginService;
+    }
+    
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
-        // Initialize services
-        // In a real application, these would be injected using a dependency injection framework
-        this.loginService = ServletUtil.getLoginService();
+        if (this.loginService == null) {
+            this.loginService = ServletUtil.getLoginService();
+        }
         
         LOGGER.info("SecurityFilter initialized");
     }
@@ -93,6 +107,7 @@ public class SecurityFilter implements Filter {
         // Check if user is authenticated
         if (!isAuthenticated(httpRequest)) {
             // User is not authenticated, redirect to login page
+            LOGGER.log(Level.INFO, "isAuthenticated returned false for path: {0}", path);
             LOGGER.log(Level.INFO, "Unauthenticated access attempt to {0}, redirecting to login", path);
             httpResponse.sendRedirect(httpRequest.getContextPath() + "/login?redirect=" + path);
             return;
@@ -102,6 +117,7 @@ public class SecurityFilter implements Filter {
         try {
             if (!validateSession(httpRequest)) {
                 // Session is invalid, redirect to login page
+                LOGGER.log(Level.INFO, "validateSession returned false for path: {0}", path);
                 LOGGER.log(Level.INFO, "Invalid session for access to {0}, redirecting to login", path);
                 invalidateSession(httpRequest, httpResponse);
                 httpResponse.sendRedirect(httpRequest.getContextPath() + "/login?redirect=" + path);
@@ -114,10 +130,17 @@ public class SecurityFilter implements Filter {
         }
         
         // Check if user has permission to access the resource
-        User user = (User) httpRequest.getSession().getAttribute(USER_ATTRIBUTE);
+        HttpSession session = httpRequest.getSession(false);
+        if (session == null) {
+            LOGGER.log(Level.INFO, "Session is null for path: {0}", path);
+            httpResponse.sendRedirect(httpRequest.getContextPath() + "/login?redirect=" + path);
+            return;
+        }
+        User user = (User) session.getAttribute(USER_ATTRIBUTE);
         if (!hasPermission(user, path, httpRequest.getMethod())) {
             // User doesn't have permission, return 403 Forbidden
             LOGGER.log(Level.INFO, "Access denied for user {0} to {1}", new Object[]{user.getId(), path});
+            LOGGER.log(Level.INFO, "hasPermission returned false for user {0} and path: {1}", new Object[]{user.getId(), path});
             httpResponse.sendError(HttpServletResponse.SC_FORBIDDEN, "Access denied");
             return;
         }
@@ -161,6 +184,7 @@ public class SecurityFilter implements Filter {
      */
     private boolean isAuthenticated(HttpServletRequest request) {
         // Check if user is in session
+        LOGGER.log(Level.INFO, "Checking if user is authenticated");
         HttpSession session = request.getSession(false);
         if (session != null && session.getAttribute(USER_ATTRIBUTE) != null) {
             return true;
@@ -169,6 +193,7 @@ public class SecurityFilter implements Filter {
         // Check if session token is in cookie
         String sessionToken = getSessionTokenFromCookie(request);
         if (sessionToken != null) {
+            LOGGER.log(Level.INFO, "Found session token in cookie: {0}", sessionToken);
             try {
                 // Validate session token
                 Optional<UserSession> userSession = loginService.validateSession(sessionToken);
@@ -176,9 +201,11 @@ public class SecurityFilter implements Filter {
                     // Session is valid, get user and store in session
                     Optional<User> user = loginService.getUserById(userSession.get().getUserId());
                     if (user.isPresent()) {
+                        LOGGER.log(Level.INFO, "User found for session token: {0}", user.get().getId());
                         // Create session if it doesn't exist
                         session = request.getSession(true);
                         session.setAttribute(USER_ATTRIBUTE, user.get());
+                        LOGGER.log(Level.INFO, "Set user attribute in session: {0}", user.get().getId());
                         session.setAttribute(SESSION_TOKEN_ATTRIBUTE, sessionToken);
                         return true;
                     }
