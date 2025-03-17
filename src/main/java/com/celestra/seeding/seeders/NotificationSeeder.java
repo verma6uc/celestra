@@ -101,7 +101,7 @@ public class NotificationSeeder {
                 NotificationDeliveryMethod deliveryMethod = EnumUtil.getWeightedRandomEnumValue(NotificationDeliveryMethod.class, notificationDeliveryMethodWeights);
                 
                 // Generate timestamps
-                Timestamp[] timestamps = TimestampUtil.getCreatedUpdatedTimestamps(30, 7, 1440);
+                Timestamp[] timestamps = TimestampUtil.getCreatedUpdatedTimestamps(7, 30, 1440);
                 Timestamp createdAt = timestamps[0];
                 Timestamp updatedAt = timestamps[1];
                 
