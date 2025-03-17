@@ -1,6 +1,6 @@
 package com.celestra.model;
 
-import java.time.OffsetDateTime;
+import java.sql.Timestamp;
 import java.util.Objects;
 
 /**
@@ -11,7 +11,7 @@ public class AgentKnowledgeBase {
     private Integer id;
     private Integer agentId;
     private Integer knowledgeBaseId;
-    private OffsetDateTime createdAt;
+    private Timestamp createdAt;
     
     // References to associated entities (not stored in database)
     private Agent agent;
@@ -43,7 +43,7 @@ public class AgentKnowledgeBase {
      * @param knowledgeBaseId The ID of the associated knowledge base
      * @param createdAt The creation timestamp
      */
-    public AgentKnowledgeBase(Integer id, Integer agentId, Integer knowledgeBaseId, OffsetDateTime createdAt) {
+    public AgentKnowledgeBase(Integer id, Integer agentId, Integer knowledgeBaseId, Timestamp createdAt) {
         this.id = id;
         this.agentId = agentId;
         this.knowledgeBaseId = knowledgeBaseId;
@@ -76,11 +76,11 @@ public class AgentKnowledgeBase {
         this.knowledgeBaseId = knowledgeBaseId;
     }
 
-    public OffsetDateTime getCreatedAt() {
+    public Timestamp getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(OffsetDateTime createdAt) {
+    public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }
     

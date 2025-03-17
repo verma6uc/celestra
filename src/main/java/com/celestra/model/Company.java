@@ -1,6 +1,6 @@
 package com.celestra.model;
 
-import java.time.OffsetDateTime;
+import java.sql.Timestamp;
 import java.util.Objects;
 
 import com.celestra.enums.CompanySize;
@@ -18,8 +18,8 @@ public class Company {
     private CompanySize size;
     private CompanyVertical vertical;
     private CompanyStatus status;
-    private OffsetDateTime createdAt;
-    private OffsetDateTime updatedAt;
+    private Timestamp createdAt;
+    private Timestamp updatedAt;
     
     /**
      * Default constructor
@@ -56,7 +56,7 @@ public class Company {
      */
     public Company(Integer id, String name, String description, CompanySize size, 
                   CompanyVertical vertical, CompanyStatus status, 
-                  OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+                  Timestamp createdAt, Timestamp updatedAt) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -117,19 +117,19 @@ public class Company {
         this.status = status;
     }
 
-    public OffsetDateTime getCreatedAt() {
+    public Timestamp getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(OffsetDateTime createdAt) {
+    public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }
 
-    public OffsetDateTime getUpdatedAt() {
+    public Timestamp getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(OffsetDateTime updatedAt) {
+    public void setUpdatedAt(Timestamp updatedAt) {
         this.updatedAt = updatedAt;
     }
     

@@ -1,6 +1,6 @@
 package com.celestra.model;
 
-import java.time.OffsetDateTime;
+import java.sql.Timestamp;
 import java.util.Objects;
 
 import com.celestra.enums.AgentStatus;
@@ -16,8 +16,8 @@ public class Agent {
     private String description;
     private String agentProtocol;
     private AgentStatus status;
-    private OffsetDateTime createdAt;
-    private OffsetDateTime updatedAt;
+    private Timestamp createdAt;
+    private Timestamp updatedAt;
     
     // Reference to the associated company (not stored in database)
     private Company company;
@@ -55,7 +55,7 @@ public class Agent {
      */
     public Agent(Integer id, Integer companyId, String name, String description, 
                 String agentProtocol, AgentStatus status, 
-                OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+                Timestamp createdAt, Timestamp updatedAt) {
         this.id = id;
         this.companyId = companyId;
         this.name = name;
@@ -116,19 +116,19 @@ public class Agent {
         this.status = status;
     }
 
-    public OffsetDateTime getCreatedAt() {
+    public Timestamp getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(OffsetDateTime createdAt) {
+    public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }
 
-    public OffsetDateTime getUpdatedAt() {
+    public Timestamp getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(OffsetDateTime updatedAt) {
+    public void setUpdatedAt(Timestamp updatedAt) {
         this.updatedAt = updatedAt;
     }
     

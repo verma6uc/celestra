@@ -1,6 +1,6 @@
 package com.celestra.model;
 
-import java.time.OffsetDateTime;
+import java.sql.Timestamp;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -22,7 +22,7 @@ public class AuditLog {
     private String tableName;
     private String recordId;
     private UUID groupId;
-    private OffsetDateTime createdAt;
+    private Timestamp createdAt;
     
     // References to associated entities (not stored in database)
     private User user;
@@ -62,7 +62,7 @@ public class AuditLog {
      */
     public AuditLog(Integer id, Integer userId, AuditEventType eventType, String eventDescription, 
                    String ipAddress, Integer signedBy, String digitalSignature, String reason, 
-                   String tableName, String recordId, UUID groupId, OffsetDateTime createdAt) {
+                   String tableName, String recordId, UUID groupId, Timestamp createdAt) {
         this.id = id;
         this.userId = userId;
         this.eventType = eventType;
@@ -167,11 +167,11 @@ public class AuditLog {
         this.groupId = groupId;
     }
 
-    public OffsetDateTime getCreatedAt() {
+    public Timestamp getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(OffsetDateTime createdAt) {
+    public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }
     

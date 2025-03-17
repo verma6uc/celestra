@@ -1,6 +1,6 @@
 package com.celestra.model;
 
-import java.time.OffsetDateTime;
+import java.sql.Timestamp;
 import java.util.Objects;
 
 import com.celestra.enums.KnowledgeBaseStatus;
@@ -15,8 +15,8 @@ public class KnowledgeBase {
     private String name;
     private String description;
     private KnowledgeBaseStatus status;
-    private OffsetDateTime createdAt;
-    private OffsetDateTime updatedAt;
+    private Timestamp createdAt;
+    private Timestamp updatedAt;
     
     // Reference to the associated company (not stored in database)
     private Company company;
@@ -52,7 +52,7 @@ public class KnowledgeBase {
      * @param updatedAt The last update timestamp
      */
     public KnowledgeBase(Integer id, Integer companyId, String name, String description, 
-                        KnowledgeBaseStatus status, OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+                        KnowledgeBaseStatus status, Timestamp createdAt, Timestamp updatedAt) {
         this.id = id;
         this.companyId = companyId;
         this.name = name;
@@ -104,19 +104,19 @@ public class KnowledgeBase {
         this.status = status;
     }
 
-    public OffsetDateTime getCreatedAt() {
+    public Timestamp getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(OffsetDateTime createdAt) {
+    public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }
 
-    public OffsetDateTime getUpdatedAt() {
+    public Timestamp getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(OffsetDateTime updatedAt) {
+    public void setUpdatedAt(Timestamp updatedAt) {
         this.updatedAt = updatedAt;
     }
     

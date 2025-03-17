@@ -1,6 +1,6 @@
 package com.celestra.model;
 
-import java.time.OffsetDateTime;
+import java.sql.Timestamp;
 import java.util.Objects;
 
 import com.celestra.enums.UserRole;
@@ -18,8 +18,8 @@ public class User {
     private String name;
     private String passwordHash;
     private UserStatus status;
-    private OffsetDateTime createdAt;
-    private OffsetDateTime updatedAt;
+    private Timestamp createdAt;
+    private Timestamp updatedAt;
     
     // Reference to the associated company (not stored in database)
     private Company company;
@@ -61,7 +61,7 @@ public class User {
      * @param updatedAt The last update timestamp
      */
     public User(Integer id, Integer companyId, UserRole role, String email, String name, 
-               String passwordHash, UserStatus status, OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+               String passwordHash, UserStatus status, Timestamp createdAt, Timestamp updatedAt) {
         this.id = id;
         this.companyId = companyId;
         this.role = role;
@@ -131,19 +131,19 @@ public class User {
         this.status = status;
     }
 
-    public OffsetDateTime getCreatedAt() {
+    public Timestamp getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(OffsetDateTime createdAt) {
+    public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }
 
-    public OffsetDateTime getUpdatedAt() {
+    public Timestamp getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(OffsetDateTime updatedAt) {
+    public void setUpdatedAt(Timestamp updatedAt) {
         this.updatedAt = updatedAt;
     }
     
