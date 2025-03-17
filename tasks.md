@@ -18,7 +18,7 @@
     - Constructors (default and parameterized)
     - toString(), equals(), and hashCode() methods
 
-- [ ] **Verify completeness of enums and POJOs**
+- [x] **Verify completeness of enums and POJOs**
   - **Why**: Ensure all database entities are properly represented in the Java model before proceeding.
   - **What**: Cross-check the created enum and POJO classes against the schema.sql file to confirm that all tables, columns, relationships, and enum values have been properly implemented.
 
