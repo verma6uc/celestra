@@ -358,6 +358,17 @@ public class LoginServiceImpl implements LoginService {
         return failedLoginTrackingService.getRecentFailedLoginCountByIp(ipAddress, minutes);
     }
     
+    @Override
+    public Optional<User> getUserById(Integer userId) throws SQLException {
+        if (userId == null) {
+            LOGGER.log(Level.WARNING, "Attempted to get user with null ID");
+            return Optional.empty();
+        }
+        
+        // Delegate to the UserDao
+        return userDao.findById(userId);
+    }
+    
     /**
      * Generate a secure random session token.
      * 

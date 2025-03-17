@@ -116,4 +116,13 @@ public interface LoginService {
      * @throws SQLException if a database error occurs
      */
     int getRecentFailedLoginCount(String ipAddress, int minutes) throws SQLException;
+    
+    /**
+     * Get a user by ID.
+     * 
+     * @param userId The ID of the user
+     * @return An Optional containing the User if found, or empty if not found
+     * @throws SQLException if a database error occurs
+     */
+    Optional<User> getUserById(Integer userId) throws SQLException;
 }

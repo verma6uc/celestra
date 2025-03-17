@@ -148,7 +148,7 @@
 
 ## Authorization System
 
-- [ ] **Implement Role-Based Authorization**
+- [ ] ~~**Implement Role-Based Authorization**~~ (Skipped)
   - **Why**: Different user types need different access levels.
   - **What**: Create an authorization system that:
     - Defines permissions for each role
@@ -157,7 +157,7 @@
     - Separates super admin capabilities from other roles
     - Handles company-specific permissions
 
-- [ ] **Create Security Filter/Interceptor**
+- [x] **Create Security Filter/Interceptor**
   - **Why**: A centralized security filter enforces authentication and authorization rules.
   - **What**: Create a filter/interceptor that:
     - Validates active sessions
