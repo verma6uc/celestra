@@ -65,6 +65,14 @@ public class TestAuthConfigProvider implements AuthConfigProvider {
     public void setPasswordHistoryCount(int passwordHistoryCount) {
         this.passwordHistoryCount = passwordHistoryCount;
     }
+
+    public void setLockoutMaxAttempts(int lockoutMaxAttempts) {
+        this.lockoutMaxAttempts = lockoutMaxAttempts;
+    }
+    
+    public void setLockoutWindowMinutes(int lockoutWindowMinutes) {
+        this.lockoutWindowMinutes = lockoutWindowMinutes;
+    }
     
     public void setPasswordResetTokenExpirationMinutes(int passwordResetTokenExpirationMinutes) {
         this.passwordResetTokenExpirationMinutes = passwordResetTokenExpirationMinutes;
