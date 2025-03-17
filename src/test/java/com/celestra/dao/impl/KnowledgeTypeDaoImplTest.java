@@ -40,14 +40,14 @@ public class KnowledgeTypeDaoImplTest extends BaseDaoTest {
         cleanupTestData();
         
         // Insert test knowledge types
-        executeSQL("INSERT INTO knowledge_types (id, name, description, created_at, updated_at) " +
-                   "VALUES (nextval('knowledge_types_id_seq'), 'Document', 'Document-based knowledge source', NOW(), NOW())");
+        executeSQL("INSERT INTO knowledge_types (name, description, created_at, updated_at) " +
+                   "VALUES ('Document', 'Document-based knowledge source', NOW(), NOW()) RETURNING id");
         
-        executeSQL("INSERT INTO knowledge_types (id, name, description, created_at, updated_at) " +
-                   "VALUES (nextval('knowledge_types_id_seq'), 'Database', 'Database-based knowledge source', NOW(), NOW())");
+        executeSQL("INSERT INTO knowledge_types (name, description, created_at, updated_at) " +
+                   "VALUES ('Database', 'Database-based knowledge source', NOW(), NOW()) RETURNING id");
         
-        executeSQL("INSERT INTO knowledge_types (id, name, description, created_at, updated_at) " +
-                   "VALUES (nextval('knowledge_types_id_seq'), 'API', 'API-based knowledge source', NOW(), NOW())");
+        executeSQL("INSERT INTO knowledge_types (name, description, created_at, updated_at) " +
+                   "VALUES ('API', 'API-based knowledge source', NOW(), NOW()) RETURNING id");
     }
     
     @Override
