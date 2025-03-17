@@ -1,6 +1,6 @@
 package com.celestra.model;
 
-import java.time.OffsetDateTime;
+import java.sql.Timestamp;
 import java.util.Objects;
 
 /**
@@ -13,7 +13,7 @@ public class AuditChangeLog {
     private String columnName;
     private String oldValue;
     private String newValue;
-    private OffsetDateTime createdAt;
+    private Timestamp createdAt;
     
     // Reference to the associated audit log (not stored in database)
     private AuditLog auditLog;
@@ -51,7 +51,7 @@ public class AuditChangeLog {
      * @param createdAt The timestamp when change was recorded
      */
     public AuditChangeLog(Integer id, Integer auditLogId, String columnName, 
-                         String oldValue, String newValue, OffsetDateTime createdAt) {
+                         String oldValue, String newValue, Timestamp createdAt) {
         this.id = id;
         this.auditLogId = auditLogId;
         this.columnName = columnName;
@@ -102,11 +102,11 @@ public class AuditChangeLog {
         this.newValue = newValue;
     }
 
-    public OffsetDateTime getCreatedAt() {
+    public Timestamp getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(OffsetDateTime createdAt) {
+    public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }
     
@@ -179,7 +179,7 @@ public class AuditChangeLog {
                ", columnName='" + columnName + '\'' +
                ", oldValue='" + (oldValue != null ? oldValue.substring(0, Math.min(oldValue.length(), 30)) + "..." : null) + '\'' +
                ", newValue='" + (newValue != null ? newValue.substring(0, Math.min(newValue.length(), 30)) + "..." : null) + '\'' +
-               ", createdAt=" + createdAt +
+               ", createdAt=" + (createdAt != null ? createdAt.toString() : null) +
                '}';
     }
 }

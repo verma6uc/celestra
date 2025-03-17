@@ -1,6 +1,6 @@
 package com.celestra.model;
 
-import java.time.OffsetDateTime;
+import java.sql.Timestamp;
 import java.util.Objects;
 
 import com.celestra.enums.NotificationDeliveryMethod;
@@ -22,12 +22,12 @@ public class Notification {
     private NotificationPriority priority;
     private NotificationStatus status;
     private NotificationDeliveryMethod deliveryMethod;
-    private OffsetDateTime readAt;
+    private Timestamp readAt;
     private String actionUrl;
-    private OffsetDateTime expiresAt;
-    private OffsetDateTime deliveredAt;
-    private OffsetDateTime createdAt;
-    private OffsetDateTime updatedAt;
+    private Timestamp expiresAt;
+    private Timestamp deliveredAt;
+    private Timestamp createdAt;
+    private Timestamp updatedAt;
     
     // References to associated entities (not stored in database)
     private User user;
@@ -80,8 +80,8 @@ public class Notification {
     public Notification(Integer id, Integer userId, Integer companyId, NotificationType notificationType, 
                        String title, String message, NotificationPriority priority, 
                        NotificationStatus status, NotificationDeliveryMethod deliveryMethod, 
-                       OffsetDateTime readAt, String actionUrl, OffsetDateTime expiresAt, 
-                       OffsetDateTime deliveredAt, OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+                       Timestamp readAt, String actionUrl, Timestamp expiresAt, 
+                       Timestamp deliveredAt, Timestamp createdAt, Timestamp updatedAt) {
         this.id = id;
         this.userId = userId;
         this.companyId = companyId;
@@ -173,11 +173,11 @@ public class Notification {
         this.deliveryMethod = deliveryMethod;
     }
 
-    public OffsetDateTime getReadAt() {
+    public Timestamp getReadAt() {
         return readAt;
     }
 
-    public void setReadAt(OffsetDateTime readAt) {
+    public void setReadAt(Timestamp readAt) {
         this.readAt = readAt;
     }
 
@@ -189,35 +189,35 @@ public class Notification {
         this.actionUrl = actionUrl;
     }
 
-    public OffsetDateTime getExpiresAt() {
+    public Timestamp getExpiresAt() {
         return expiresAt;
     }
 
-    public void setExpiresAt(OffsetDateTime expiresAt) {
+    public void setExpiresAt(Timestamp expiresAt) {
         this.expiresAt = expiresAt;
     }
 
-    public OffsetDateTime getDeliveredAt() {
+    public Timestamp getDeliveredAt() {
         return deliveredAt;
     }
 
-    public void setDeliveredAt(OffsetDateTime deliveredAt) {
+    public void setDeliveredAt(Timestamp deliveredAt) {
         this.deliveredAt = deliveredAt;
     }
 
-    public OffsetDateTime getCreatedAt() {
+    public Timestamp getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(OffsetDateTime createdAt) {
+    public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }
 
-    public OffsetDateTime getUpdatedAt() {
+    public Timestamp getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(OffsetDateTime updatedAt) {
+    public void setUpdatedAt(Timestamp updatedAt) {
         this.updatedAt = updatedAt;
     }
     
@@ -267,7 +267,7 @@ public class Notification {
      * @return true if the notification has expired, false otherwise
      */
     public boolean isExpired() {
-        return expiresAt != null && expiresAt.isBefore(OffsetDateTime.now());
+        return expiresAt != null && expiresAt.before(new Timestamp(System.currentTimeMillis()));
     }
     
     /**

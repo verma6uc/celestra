@@ -1,6 +1,7 @@
 package com.celestra.model;
 
-import java.time.OffsetDateTime;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.Objects;
 
 import com.celestra.enums.InvitationStatus;
@@ -14,11 +15,11 @@ public class Invitation {
     private Integer userId;
     private String token;
     private InvitationStatus status;
-    private OffsetDateTime sentAt;
-    private OffsetDateTime expiresAt;
+    private Timestamp sentAt;
+    private Timestamp expiresAt;
     private Integer resendCount;
-    private OffsetDateTime createdAt;
-    private OffsetDateTime updatedAt;
+    private Timestamp createdAt;
+    private Timestamp updatedAt;
     
     // Reference to the associated user (not stored in database)
     private User user;
@@ -57,8 +58,8 @@ public class Invitation {
      * @param updatedAt The last update timestamp
      */
     public Invitation(Integer id, Integer userId, String token, InvitationStatus status, 
-                     OffsetDateTime sentAt, OffsetDateTime expiresAt, Integer resendCount, 
-                     OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+                     Timestamp sentAt, Timestamp expiresAt, Integer resendCount, 
+                     Timestamp createdAt, Timestamp updatedAt) {
         this.id = id;
         this.userId = userId;
         this.token = token;
@@ -104,19 +105,19 @@ public class Invitation {
         this.status = status;
     }
 
-    public OffsetDateTime getSentAt() {
+    public Timestamp getSentAt() {
         return sentAt;
     }
 
-    public void setSentAt(OffsetDateTime sentAt) {
+    public void setSentAt(Timestamp sentAt) {
         this.sentAt = sentAt;
     }
 
-    public OffsetDateTime getExpiresAt() {
+    public Timestamp getExpiresAt() {
         return expiresAt;
     }
 
-    public void setExpiresAt(OffsetDateTime expiresAt) {
+    public void setExpiresAt(Timestamp expiresAt) {
         this.expiresAt = expiresAt;
     }
 
@@ -128,19 +129,19 @@ public class Invitation {
         this.resendCount = resendCount;
     }
 
-    public OffsetDateTime getCreatedAt() {
+    public Timestamp getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(OffsetDateTime createdAt) {
+    public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }
 
-    public OffsetDateTime getUpdatedAt() {
+    public Timestamp getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(OffsetDateTime updatedAt) {
+    public void setUpdatedAt(Timestamp updatedAt) {
         this.updatedAt = updatedAt;
     }
     
@@ -180,7 +181,7 @@ public class Invitation {
      */
     public boolean isExpired() {
         return status == InvitationStatus.EXPIRED || 
-               (expiresAt != null && expiresAt.isBefore(OffsetDateTime.now()));
+               (expiresAt != null && expiresAt.before(new Timestamp(System.currentTimeMillis())));
     }
     
     /**
