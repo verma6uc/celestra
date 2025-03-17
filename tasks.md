@@ -1,95 +1,103 @@
-# Data Seeding Tasks
+# AI Utilities and Email Service Tasks
 
-## Analysis and Planning
+## AI Integration Configuration
 
-- [x] **Analyze database schema structure**
-  - **Why**: Understanding the schema structure is essential for creating a proper seeding plan that respects table relationships and constraints.
-  - **What**: Carefully review the SQL file at `/Users/nupurbhaisare/celestra-workspace/celestra/docs/db/schema.sql` to:
-    - Identify all tables and their relationships
-    - Note primary and foreign key constraints
-    - Understand data types and constraints for each column
-    - Identify required vs. optional fields
-    - Document enum values and their constraints
+- [ ] **Create shared configuration file for AI APIs**
+  - **Why**: A single configuration file for both AI services simplifies management and ensures consistent settings.
+  - **What**: Create a properties file to store API keys and configuration parameters for both OpenAI and Claude services, including:
+    - API keys for both services
+    - Model identifiers ("o3-mini-2025-01-31" for OpenAI and "claude-3-7-sonnet-20250219" for Claude)
+    - Token limits (64000 for OpenAI and 8192 for Claude)
+    - Common parameters like temperature, top_p, etc.
 
-- [x] **Review application features to understand data requirements**
-  - **Why**: The seeded data should support the application features and use cases to enable effective testing and demonstration.
-  - **What**: Read the feature documentation in `/Users/nupurbhaisare/celestra-workspace/celestra/docs/features` to:
-    - Understand how each table is used in the application
-    - Identify important data patterns and business rules
-    - Note any specific data requirements for testing key features
-    - Understand the expected volume and variety of data needed
+## OpenAI Integration
 
-- [x] **Create comprehensive data seeding plan**
-  - **Why**: A detailed plan ensures data is inserted in the correct order, with appropriate relationships, and in a way that supports application features.
-  - **What**: Develop a seeding plan document that includes:
-    - Tables listed in insertion order (respecting foreign key constraints)
-    - Volume of data to insert for each table
-    - Specific Faker methods to use for each column type
-    - Strategy for generating related records across tables
-    - Handling of enum values and other constrained fields
-    - Approach for generating realistic data patterns that support features
-    - Special cases or custom data generation requirements
+- [ ] **Implement OpenAI utility class for chat completion**
+  - **Why**: A dedicated utility class encapsulates OpenAI API interactions for chat completion, providing a clean interface for the rest of the application.
+  - **What**: Create a utility class that:
+    - Loads configuration from the shared properties file
+    - Establishes connection to OpenAI API using the specified key
+    - Focuses exclusively on chat completion functionality using the "o3-mini-2025-01-31" model
+    - Respects the 64000 token limit for this model
+    - Implements retry logic with hardcoded retry attempts (e.g., 3 retries) for transient errors
+    - Handles different error scenarios including rate limits, authentication failures, invalid requests, and server errors
+    - Provides methods to customize request parameters (temperature, max tokens, etc.)
+    - Implements proper resource management and cleanup
 
-## Implementation
+## Claude Integration
 
-- [x] **Set up seeding utilities**
-  - **Why**: Helper utilities will make the seeding process more consistent and efficient.
-  - **What**: Implement utility methods that:
-    - Leverage the existing database connection
-    - Provide helper methods for batch insertions
-    - Configure and initialize the Faker library
-    - Include error handling and logging for seeding operations
+- [ ] **Implement Claude utility class for chat completion**
+  - **Why**: A dedicated utility for Claude API interactions makes it easier to swap between AI services and maintains clean separation of concerns.
+  - **What**: Create a utility class that:
+    - Loads configuration from the shared properties file
+    - Establishes connection to Claude API using the specified key
+    - Focuses exclusively on chat completion functionality using the "claude-3-7-sonnet-20250219" model
+    - Respects the 8192 token limit for this model
+    - Implements retry logic with hardcoded retry attempts for handling transient errors
+    - Handles Claude-specific error scenarios including rate limits, authentication failures, invalid requests, and server errors
+    - Provides methods to customize request parameters (temperature, max tokens, etc.)
+    - Implements proper response parsing and extraction
+    - Ensures efficient resource management
 
-- [x] **Implement seeding classes for independent tables**
-  - **Why**: Tables without foreign key dependencies should be seeded first.
-  - **What**: Create Java classes that:
-    - Generate appropriate fake data using Faker
-    - Handle any table-specific constraints or business rules
-    - Perform bulk inserts for efficiency
-    - Include progress reporting and error handling
+## AI Utilities Testing
 
-- [x] **Implement seeding classes for dependent tables**
-  - **Why**: Tables with foreign key dependencies must be seeded after their parent tables.
-  - **What**: Create Java classes that:
-    - Query for existing IDs from parent tables
-    - Generate appropriate fake data with valid relationships
-    - Handle complex relationship patterns (one-to-many, many-to-many)
-    - Perform bulk inserts while maintaining referential integrity
-    - Include progress reporting and error handling
+- [ ] **Create test cases for OpenAI chat completion utility**
+  - **Why**: Testing ensures the OpenAI integration functions correctly and handles errors appropriately.
+  - **What**: Create a test class that:
+    - Tests successful chat completion API calls
+    - Tests retry mechanism by simulating transient failures
+    - Tests error handling for various error types (rate limits, authentication, etc.)
+    - Verifies proper response parsing
+    - Tests with different conversation contexts
+    - Verifies handling of token limit (64000) edge cases
 
-- [x] **Create master seeding coordinator class**
-  - **Why**: A coordinator ensures tables are seeded in the correct order and provides a unified interface for the seeding process.
-  - **What**: Implement a coordinator class that:
-    - Executes individual seeding classes in the proper sequence
-    - Handles dependencies between seeding operations
-    - Provides overall progress reporting
-    - Includes transaction management for data consistency
-    - Offers options for full or partial seeding
+- [ ] **Create test cases for Claude chat completion utility**
+  - **Why**: Testing ensures the Claude integration functions correctly and handles errors appropriately.
+  - **What**: Create a test class that:
+    - Tests successful chat completion API calls
+    - Tests retry mechanism by simulating transient failures
+    - Tests error handling for various error types
+    - Verifies proper response parsing
+    - Tests with different conversation contexts
+    - Verifies handling of token limit (8192) edge cases
 
-## Execution and Verification
+## Email Service
 
-- [ ] **Execute seeding process for each table**
-  - **Why**: Seeding tables one by one allows for better control and troubleshooting.
-  - **What**: Run each seeding class individually:
-    - Start with independent tables
-    - Proceed to dependent tables in the correct order
-    - Monitor for errors or constraint violations
-    - Verify data volume meets requirements
+- [ ] **Create separate email configuration file**
+  - **Why**: Keeping email configuration in a dedicated properties file improves security and allows for independent updates to email settings.
+  - **What**: Create a separate properties file specifically for email configuration that includes:
+    - SMTP server host (email-smtp.ap-south-1.amazonaws.com)
+    - SMTP port (465)
+    - Authentication settings (enabled)
+    - SSL settings (enabled)
+    - Username (AKIAXWWAENHRKEXWAEU2)
+    - Password (BJ+IiVs1NLQg/cOoWTF3Woedp1prO9crMRH0ZK2Cv2HY)
+    - From address (no-reply@leucinetech.com)
 
-- [ ] **Troubleshoot and fix any seeding issues**
-  - **Why**: Error handling ensures data integrity and complete seeding.
-  - **What**: For any errors encountered:
-    - Analyze error messages and stack traces
-    - Review database constraints that might be violated
-    - Fix data generation logic to comply with constraints
-    - Adjust seeding approach for problematic tables
-    - Re-run failed seeding operations
+- [ ] **Implement email configuration utility**
+  - **Why**: A dedicated configuration utility ensures proper loading and validation of email settings.
+  - **What**: Create a utility class that:
+    - Loads the email configuration from the separate properties file
+    - Validates the required properties are present
+    - Provides a clean API for accessing the email configuration values
+    - Handles configuration changes at runtime if needed
 
-- [ ] **Verify seeded data meets application requirements**
-  - **Why**: Confirmation that the seeded data will support application testing and demonstrations.
-  - **What**: Perform validation checks:
-    - Query key tables to verify record counts
-    - Sample data to ensure it appears realistic
-    - Test important relationships between tables
-    - Verify that seeded data supports critical application features
-    - Confirm data volumes are appropriate for testing
+- [ ] **Implement email sending service**
+  - **Why**: A dedicated service for email functionality provides a clean interface and reusable component for the application.
+  - **What**: Create an email service that:
+    - Uses the email configuration utility to get SMTP connection details
+    - Provides methods for sending plain text and HTML emails
+    - Supports attachments
+    - Handles multiple recipients (To, CC, BCC)
+    - Implements error handling for various email sending failures
+    - Includes logging for email operations
+    - Properly manages resources and connections
+
+- [ ] **Create test cases for email service**
+  - **Why**: Testing ensures the email functionality works correctly before being used in production.
+  - **What**: Create a test class that:
+    - Tests email sending to verify correct configuration, using "nupur.bhaisare@leucinetech.com" as the test recipient email address
+    - Tests different email formats (plain text, HTML)
+    - Tests with attachments
+    - Tests with multiple recipients (including "nupur.bhaisare@leucinetech.com" as the primary recipient)
+    - Verifies error handling for connection failures, invalid addresses, etc.

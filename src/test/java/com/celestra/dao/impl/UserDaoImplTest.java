@@ -49,13 +49,13 @@ public class UserDaoImplTest extends BaseDaoTest {
         
         // Insert test users
         executeSQL("INSERT INTO users (company_id, role, email, name, password_hash, status, created_at, updated_at) " +
-                   "VALUES (1, 'COMPANY_ADMIN'::user_role, 'admin@test.com', 'Test Admin', 'hash123', 'ACTIVE'::user_status, NOW(), NOW())");
+                   "VALUES ((SELECT id FROM companies WHERE name = 'Test Company 1'), 'COMPANY_ADMIN'::user_role, 'admin@test.com', 'Test Admin', 'hash123', 'ACTIVE'::user_status, NOW(), NOW())");
         
         executeSQL("INSERT INTO users (company_id, role, email, name, password_hash, status, created_at, updated_at) " +
-                   "VALUES (1, 'REGULAR_USER'::user_role, 'user@test.com', 'Test User', 'hash456', 'ACTIVE'::user_status, NOW(), NOW())");
+                   "VALUES ((SELECT id FROM companies WHERE name = 'Test Company 1'), 'REGULAR_USER'::user_role, 'user@test.com', 'Test User', 'hash456', 'ACTIVE'::user_status, NOW(), NOW())");
         
         executeSQL("INSERT INTO users (company_id, role, email, name, password_hash, status, created_at, updated_at) " +
-                   "VALUES (2, 'COMPANY_ADMIN'::user_role, 'admin2@test.com', 'Another Admin', 'hash789', 'SUSPENDED'::user_status, NOW(), NOW())");
+                   "VALUES ((SELECT id FROM companies WHERE name = 'Test Company 2'), 'COMPANY_ADMIN'::user_role, 'admin2@test.com', 'Another Admin', 'hash789', 'SUSPENDED'::user_status, NOW(), NOW())");
     }
     
     @Override
