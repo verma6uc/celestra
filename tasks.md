@@ -22,7 +22,7 @@
 
 ## Core User Management
 
-- [ ] **Extend Existing User DAO**
+- [x] **Extend Existing User DAO**
   - **Why**: The existing UserDAO needs to be enhanced to support authentication-specific operations.
   - **What**: Add methods to the existing UserDAO for:
     - Authentication-specific queries

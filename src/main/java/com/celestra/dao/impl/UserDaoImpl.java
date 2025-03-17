@@ -87,6 +87,52 @@ public class UserDaoImpl extends AbstractBaseDao<User, Integer> implements UserD
             EMAIL_COLUMN + " = ? AND " + 
             PASSWORD_HASH_COLUMN + " = ? AND " + 
             STATUS_COLUMN + " = ?::user_status";
+            
+    private static final String FIND_ACTIVE_USER_BY_EMAIL_SQL = 
+            "SELECT * FROM " + TABLE_NAME + " WHERE " + 
+            EMAIL_COLUMN + " = ? AND " + 
+            STATUS_COLUMN + " = ?::user_status";
+            
+    private static final String IS_USER_LOCKED_OUT_SQL = 
+            "SELECT COUNT(*) FROM user_lockouts WHERE user_id = ? AND " + 
+            "(lockout_end IS NULL OR lockout_end > NOW())";
+            
+    private static final String HAS_ROLE_SQL = 
+            "SELECT COUNT(*) FROM " + TABLE_NAME + " WHERE " + 
+            ID_COLUMN + " = ? AND " + 
+            ROLE_COLUMN + " = ?::user_role";
+            
+    private static final String UPDATE_ROLE_SQL = 
+            "UPDATE " + TABLE_NAME + " SET " + 
+            ROLE_COLUMN + " = ?::user_role, " + 
+            UPDATED_AT_COLUMN + " = ? " + 
+            "WHERE " + ID_COLUMN + " = ?";
+            
+    private static final String COUNT_ACTIVE_SESSIONS_SQL = 
+            "SELECT COUNT(*) FROM user_sessions WHERE user_id = ? AND expires_at > NOW()";
+            
+    private static final String INVALIDATE_ALL_SESSIONS_SQL = 
+            "DELETE FROM user_sessions WHERE user_id = ?";
+            
+    private static final String FIND_BY_COMPANY_ID_AND_ROLE_AND_STATUS_SQL = 
+            "SELECT * FROM " + TABLE_NAME + " WHERE " + 
+            COMPANY_ID_COLUMN + " = ? AND " + 
+            ROLE_COLUMN + " = ?::user_role AND " + 
+            STATUS_COLUMN + " = ?::user_status";
+            
+    private static final String FIND_BY_EMAIL_CONTAINING_SQL = 
+            "SELECT * FROM " + TABLE_NAME + " WHERE " + 
+            EMAIL_COLUMN + " ILIKE ? ORDER BY " + EMAIL_COLUMN + " ASC";
+            
+    private static final String FIND_BY_CREATED_AT_AFTER_SQL = 
+            "SELECT * FROM " + TABLE_NAME + " WHERE " + 
+            CREATED_AT_COLUMN + " > ? ORDER BY " + CREATED_AT_COLUMN + " DESC";
+            
+    private static final String IS_PASSWORD_PREVIOUSLY_USED_SQL = 
+            "SELECT COUNT(*) FROM password_history WHERE user_id = ? AND password_hash = ? LIMIT ?";
+            
+    private static final String ADD_PASSWORD_TO_HISTORY_SQL = 
+            "INSERT INTO password_history (user_id, password_hash, created_at) VALUES (?, ?, ?)";
     
     @Override
     protected String getTableName() {
@@ -271,5 +317,143 @@ public class UserDaoImpl extends AbstractBaseDao<User, Integer> implements UserD
             ps.setString(2, passwordHash);
             EnumConverter.setEnumAsString(ps, 3, UserStatus.ACTIVE);
         });
+    }
+    
+    @Override
+    public Optional<User> findActiveUserByEmail(String email) throws SQLException {
+        return executeQueryForObject(FIND_ACTIVE_USER_BY_EMAIL_SQL, ps -> {
+            ps.setString(1, email);
+            EnumConverter.setEnumAsString(ps, 2, UserStatus.ACTIVE);
+        });
+    }
+    
+    @Override
+    public boolean isUserLockedOut(Integer userId) throws SQLException {
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(IS_USER_LOCKED_OUT_SQL)) {
+            
+            ps.setInt(1, userId);
+            
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+                return false;
+            }
+        }
+    }
+    
+    @Override
+    public boolean hasRole(Integer userId, UserRole role) throws SQLException {
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(HAS_ROLE_SQL)) {
+            
+            ps.setInt(1, userId);
+            EnumConverter.setEnumAsString(ps, 2, role);
+            
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+                return false;
+            }
+        }
+    }
+    
+    @Override
+    public boolean updateRole(Integer id, UserRole role) throws SQLException {
+        return executeUpdate(UPDATE_ROLE_SQL, ps -> {
+            EnumConverter.setEnumAsString(ps, 1, role);
+            ps.setTimestamp(2, new Timestamp(System.currentTimeMillis()));
+            ps.setInt(3, id);
+        }) > 0;
+    }
+    
+    @Override
+    public int countActiveSessions(Integer userId) throws SQLException {
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(COUNT_ACTIVE_SESSIONS_SQL)) {
+            
+            ps.setInt(1, userId);
+            
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+                return 0;
+            }
+        }
+    }
+    
+    @Override
+    public int invalidateAllSessions(Integer userId) throws SQLException {
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(INVALIDATE_ALL_SESSIONS_SQL)) {
+            
+            ps.setInt(1, userId);
+            
+            return ps.executeUpdate();
+        }
+    }
+    
+    @Override
+    public List<User> findByCompanyIdAndRoleAndStatus(Integer companyId, UserRole role, UserStatus status) throws SQLException {
+        if (status == null) {
+            // If status is null, use the existing findByCompanyIdAndRole method
+            return findByCompanyIdAndRole(companyId, role);
+        }
+        
+        return executeQuery(FIND_BY_COMPANY_ID_AND_ROLE_AND_STATUS_SQL, ps -> {
+            ps.setInt(1, companyId);
+            EnumConverter.setEnumAsString(ps, 2, role);
+            EnumConverter.setEnumAsString(ps, 3, status);
+        });
+    }
+    
+    @Override
+    public List<User> findByEmailContaining(String searchTerm, Integer limit) throws SQLException {
+        String sql = FIND_BY_EMAIL_CONTAINING_SQL;
+        if (limit != null && limit > 0) {
+            sql += " LIMIT " + limit;
+        }
+        
+        final String finalSql = sql;
+        return executeQuery(finalSql, ps -> {
+            ps.setString(1, "%" + searchTerm + "%");
+        });
+    }
+    
+    @Override
+    public List<User> findByCreatedAtAfter(Timestamp date) throws SQLException {
+        return executeQuery(FIND_BY_CREATED_AT_AFTER_SQL, ps -> {
+            ps.setTimestamp(1, date);
+        });
+    }
+    
+    @Override
+    public boolean isPasswordPreviouslyUsed(Integer userId, String passwordHash, Integer limit) throws SQLException {
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(IS_PASSWORD_PREVIOUSLY_USED_SQL)) {
+            
+            ps.setInt(1, userId);
+            ps.setString(2, passwordHash);
+            ps.setInt(3, limit != null && limit > 0 ? limit : 5); // Default to checking the last 5 passwords
+            
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+                return false;
+            }
+        }
+    }
+    
+    @Override
+    public boolean addPasswordToHistory(Integer userId, String passwordHash) throws SQLException {
+        return executeUpdate(ADD_PASSWORD_TO_HISTORY_SQL, ps -> {
+            ps.setInt(1, userId);
+            ps.setString(2, passwordHash);
+            ps.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
+        }) > 0;
     }
 }
