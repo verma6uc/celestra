@@ -77,7 +77,7 @@ public class InvitationSeeder {
                 InvitationStatus status = EnumUtil.getWeightedRandomEnumValue(InvitationStatus.class, invitationStatusWeights);
                 
                 // Generate timestamps
-                Timestamp[] timestamps = TimestampUtil.getCreatedUpdatedTimestamps(90, 30, 1440);
+                Timestamp[] timestamps = TimestampUtil.getCreatedUpdatedTimestamps(30, 90, 1440);
                 Timestamp createdAt = timestamps[0];
                 Timestamp updatedAt = timestamps[1];
                 
