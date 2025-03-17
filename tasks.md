@@ -31,7 +31,7 @@
     - Password handling and verification
     - Session-related user operations
 
-- [ ] **Implement Registration Service**
+- [x] **Implement Registration Service**
   - **Why**: A dedicated service encapsulates the business logic for user registration.
   - **What**: Create a registration service that:
     - Validates user input
