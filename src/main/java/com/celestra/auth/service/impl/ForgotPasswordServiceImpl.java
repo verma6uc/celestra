@@ -12,6 +12,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.celestra.auth.config.AuthConfigurationManager;
+import com.celestra.auth.config.AuthConfigProvider;
 import com.celestra.auth.service.ForgotPasswordService;
 import com.celestra.auth.util.PasswordUtil;
 import com.celestra.dao.AuditLogDao;
@@ -46,7 +47,7 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
     private final UserSessionDao userSessionDao;
     private final AuditLogDao auditLogDao;
     private final EmailService emailService;
-    private final AuthConfigurationManager authConfig;
+    private final AuthConfigProvider authConfig;
     
     /**
      * Default constructor.
@@ -66,7 +67,7 @@ public class ForgotPasswordServiceImpl implements ForgotPasswordService {
      */
     public ForgotPasswordServiceImpl(UserDao userDao, PasswordResetTokenDao passwordResetTokenDao,
             PasswordHistoryDao passwordHistoryDao, UserSessionDao userSessionDao,
-            AuditLogDao auditLogDao, EmailService emailService, AuthConfigurationManager authConfig) {
+            AuditLogDao auditLogDao, EmailService emailService, AuthConfigProvider authConfig) {
         this.userDao = userDao;
         this.passwordResetTokenDao = passwordResetTokenDao;
         this.passwordHistoryDao = passwordHistoryDao;

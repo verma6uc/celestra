@@ -13,12 +13,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import com.celestra.auth.config.AuthConfigurationManager;
+import com.celestra.auth.config.TestAuthConfigProvider;
 import com.celestra.auth.service.ForgotPasswordService;
 import com.celestra.dao.AuditLogDao;
 import com.celestra.dao.PasswordHistoryDao;
@@ -55,8 +57,7 @@ public class ForgotPasswordServiceImplTest {
     @Mock
     private EmailService emailService;
     
-    @Mock
-    private AuthConfigurationManager authConfig;
+    private TestAuthConfigProvider authConfig;
     
     private ForgotPasswordService forgotPasswordService;
     
@@ -64,9 +65,10 @@ public class ForgotPasswordServiceImplTest {
     public void setUp() {
         MockitoAnnotations.openMocks(this);
         
-        // Configure auth config mock
-        when(authConfig.getPasswordResetTokenExpirationMinutes()).thenReturn(30);
-        when(authConfig.getPasswordHistoryCount()).thenReturn(5);
+        // Create and configure test auth config
+        authConfig = new TestAuthConfigProvider();
+        authConfig.setPasswordResetTokenExpirationMinutes(30);
+        authConfig.setPasswordHistoryCount(5);
         
         forgotPasswordService = new ForgotPasswordServiceImpl(
             userDao, passwordResetTokenDao, passwordHistoryDao, userSessionDao, 
@@ -342,7 +344,7 @@ public class ForgotPasswordServiceImplTest {
         verify(passwordHistoryDao, never()).create(any());
         verify(passwordResetTokenDao, never()).markAsUsed(anyString(), any(Timestamp.class));
         verify(userSessionDao, never()).deleteByUserId(anyInt());
-        verify(auditLogDao, never()).create(any());
+        verify(auditLogDao).create(any()); // We now create an audit log for password reuse
         verifyNoInteractions(emailService);
     }
     
