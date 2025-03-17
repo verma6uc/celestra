@@ -168,7 +168,7 @@
 
 ## Testing
 
-- [ ] **Create Authentication Service Tests**
+- [x] **Create Authentication Service Tests**
   - **Why**: Testing ensures the authentication system works correctly and securely.
   - **What**: Create comprehensive tests for:
     - User registration flows
