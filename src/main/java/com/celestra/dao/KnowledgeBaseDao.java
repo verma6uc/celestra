@@ -66,4 +66,24 @@ public interface KnowledgeBaseDao extends BaseDao<KnowledgeBase, Integer> {
      * @throws SQLException if a database access error occurs
      */
     boolean updateStatus(Integer id, KnowledgeBaseStatus status) throws SQLException;
+    
+    /**
+     * Find knowledge bases by company name.
+     * 
+     * @param companyName The name of the company
+     * @return A list of knowledge bases belonging to the company with the specified name
+     * @throws SQLException if a database access error occurs
+     */
+    List<KnowledgeBase> findByCompanyName(String companyName) throws SQLException;
+    
+    /**
+     * Find knowledge bases by agent name.
+     * 
+     * @param agentName The name of the agent
+     * @return A list of knowledge bases associated with the agent with the specified name
+     * @throws SQLException if a database access error occurs
+     */
+    List<KnowledgeBase> findByAgentName(String agentName) throws SQLException;
+    
+    
 }

@@ -74,6 +74,17 @@ public class KnowledgeBaseDaoImpl extends AbstractBaseDao<KnowledgeBase, Integer
             STATUS_COLUMN + " = ?::knowledge_base_status, " + 
             UPDATED_AT_COLUMN + " = ? " + 
             "WHERE " + ID_COLUMN + " = ?";
+            
+    private static final String FIND_BY_COMPANY_NAME_SQL = 
+            "SELECT kb.* FROM " + TABLE_NAME + " kb " +
+            "JOIN companies c ON kb." + COMPANY_ID_COLUMN + " = c.id " +
+            "WHERE c.name = ?";
+            
+    private static final String FIND_BY_AGENT_NAME_SQL = 
+            "SELECT kb.* FROM " + TABLE_NAME + " kb " +
+            "JOIN " + AGENT_KNOWLEDGE_BASES_TABLE + " akb ON kb." + ID_COLUMN + " = akb." + KNOWLEDGE_BASE_ID_COLUMN + " " +
+            "JOIN agents a ON akb." + AGENT_ID_COLUMN + " = a.id " +
+            "WHERE a.name = ?";
     
     @Override
     protected String getTableName() {
@@ -219,4 +230,22 @@ public class KnowledgeBaseDaoImpl extends AbstractBaseDao<KnowledgeBase, Integer
             ps.setInt(3, id);
         }) > 0;
     }
+    
+    @Override
+    public List<KnowledgeBase> findByCompanyName(String companyName) throws SQLException {
+        return executeQuery(FIND_BY_COMPANY_NAME_SQL, ps -> 
+            ps.setString(1, companyName)
+        );
+    }
+    
+    @Override
+    public List<KnowledgeBase> findByAgentName(String agentName) throws SQLException {
+        return executeQuery(FIND_BY_AGENT_NAME_SQL, ps -> 
+            ps.setString(1, agentName)
+        );
+    }
+    
+    
+    
+    
 }

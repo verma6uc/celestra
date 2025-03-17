@@ -157,7 +157,7 @@ public class KnowledgeSourceDaoImplTest extends BaseDaoTest {
         
         // Verify the knowledge source was updated
         assertEquals("Knowledge source name should be updated", "Test Knowledge Source Updated", updatedKnowledgeSource.getName());
-        assertEquals("Knowledge source knowledge type ID should be updated", Integer.valueOf(2), updatedKnowledgeSource.getKnowledgeTypeId());
+        assertEquals("Knowledge source knowledge type ID should be updated", getKnowledgeTypeId("Test Database"), updatedKnowledgeSource.getKnowledgeTypeId());
         
         // Clean up
         boolean deleted = knowledgeSourceDao.delete(createdKnowledgeSource.getId());

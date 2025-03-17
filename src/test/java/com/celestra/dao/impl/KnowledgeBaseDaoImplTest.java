@@ -3,6 +3,8 @@ package com.celestra.dao.impl;
 import static org.junit.Assert.*;
 
 import java.sql.SQLException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,6 +15,7 @@ import com.celestra.dao.BaseDaoTest;
 import com.celestra.dao.KnowledgeBaseDao;
 import com.celestra.enums.KnowledgeBaseStatus;
 import com.celestra.model.KnowledgeBase;
+import com.celestra.db.DatabaseUtil;
 
 /**
  * Test class for KnowledgeBaseDaoImpl.
@@ -81,7 +84,7 @@ public class KnowledgeBaseDaoImplTest extends BaseDaoTest {
     public void testCreate() throws SQLException {
         // Create a new knowledge base
         KnowledgeBase knowledgeBase = new KnowledgeBase();
-        knowledgeBase.setCompanyId(1);
+        knowledgeBase.setCompanyId(getCompanyId("Test Company 1"));
         knowledgeBase.setName("Test KB Create");
         knowledgeBase.setDescription("Test Description Create");
         knowledgeBase.setStatus(KnowledgeBaseStatus.ACTIVE);
@@ -139,7 +142,7 @@ public class KnowledgeBaseDaoImplTest extends BaseDaoTest {
     public void testUpdate() throws SQLException {
         // Create a new knowledge base
         KnowledgeBase knowledgeBase = new KnowledgeBase();
-        knowledgeBase.setCompanyId(1);
+        knowledgeBase.setCompanyId(getCompanyId("Test Company 1"));
         knowledgeBase.setName("Test KB Update");
         knowledgeBase.setDescription("Test Description Update");
         knowledgeBase.setStatus(KnowledgeBaseStatus.ACTIVE);
@@ -168,7 +171,7 @@ public class KnowledgeBaseDaoImplTest extends BaseDaoTest {
     public void testDelete() throws SQLException {
         // Create a new knowledge base
         KnowledgeBase knowledgeBase = new KnowledgeBase();
-        knowledgeBase.setCompanyId(1);
+        knowledgeBase.setCompanyId(getCompanyId("Test Company 1"));
         knowledgeBase.setName("Test KB Delete");
         knowledgeBase.setDescription("Test Description Delete");
         knowledgeBase.setStatus(KnowledgeBaseStatus.ACTIVE);
@@ -191,14 +194,14 @@ public class KnowledgeBaseDaoImplTest extends BaseDaoTest {
     @Test
     public void testFindByCompanyId() throws SQLException {
         // Find knowledge bases by company ID
-        List<KnowledgeBase> knowledgeBases = knowledgeBaseDao.findByCompanyId(1);
+        List<KnowledgeBase> knowledgeBases = knowledgeBaseDao.findByCompanyId(getCompanyId("Test Company 1"));
         
         // Verify there are knowledge bases
-        assertFalse("There should be knowledge bases for company ID 1", knowledgeBases.isEmpty());
+        assertFalse("There should be knowledge bases for Test Company 1", knowledgeBases.isEmpty());
         
         // Verify all entries have the correct company ID
         for (KnowledgeBase knowledgeBase : knowledgeBases) {
-            assertEquals("Knowledge base company ID should be 1", Integer.valueOf(1), knowledgeBase.getCompanyId());
+            assertEquals("Knowledge base company ID should match Test Company 1", getCompanyId("Test Company 1"), knowledgeBase.getCompanyId());
         }
     }
     
@@ -225,14 +228,14 @@ public class KnowledgeBaseDaoImplTest extends BaseDaoTest {
     @Test
     public void testFindByCompanyIdAndStatus() throws SQLException {
         // Find knowledge bases by company ID and status
-        List<KnowledgeBase> knowledgeBases = knowledgeBaseDao.findByCompanyIdAndStatus(1, KnowledgeBaseStatus.ACTIVE);
+        List<KnowledgeBase> knowledgeBases = knowledgeBaseDao.findByCompanyIdAndStatus(getCompanyId("Test Company 1"), KnowledgeBaseStatus.ACTIVE);
         
         // Verify there are knowledge bases
-        assertFalse("There should be active knowledge bases for company ID 1", knowledgeBases.isEmpty());
+        assertFalse("There should be active knowledge bases for Test Company 1", knowledgeBases.isEmpty());
         
         // Verify all entries have the correct company ID and status
         for (KnowledgeBase knowledgeBase : knowledgeBases) {
-            assertEquals("Knowledge base company ID should be 1", Integer.valueOf(1), knowledgeBase.getCompanyId());
+            assertEquals("Knowledge base company ID should match Test Company 1", getCompanyId("Test Company 1"), knowledgeBase.getCompanyId());
             assertEquals("Knowledge base status should be ACTIVE", KnowledgeBaseStatus.ACTIVE, knowledgeBase.getStatus());
         }
     }
@@ -260,10 +263,10 @@ public class KnowledgeBaseDaoImplTest extends BaseDaoTest {
     @Test
     public void testFindByAgentId() throws SQLException {
         // Find knowledge bases by agent ID
-        List<KnowledgeBase> knowledgeBases = knowledgeBaseDao.findByAgentId(1);
+        List<KnowledgeBase> knowledgeBases = knowledgeBaseDao.findByAgentId(getAgentId("Test Agent 1"));
         
         // Verify there are knowledge bases
-        assertFalse("There should be knowledge bases for agent ID 1", knowledgeBases.isEmpty());
+        assertFalse("There should be knowledge bases for Test Agent 1", knowledgeBases.isEmpty());
     }
     
     /**
@@ -273,7 +276,7 @@ public class KnowledgeBaseDaoImplTest extends BaseDaoTest {
     public void testUpdateStatus() throws SQLException {
         // Create a new knowledge base
         KnowledgeBase knowledgeBase = new KnowledgeBase();
-        knowledgeBase.setCompanyId(1);
+        knowledgeBase.setCompanyId(getCompanyId("Test Company 1"));
         knowledgeBase.setName("Test KB Status");
         knowledgeBase.setDescription("Test Description Status");
         knowledgeBase.setStatus(KnowledgeBaseStatus.ACTIVE);
@@ -291,5 +294,58 @@ public class KnowledgeBaseDaoImplTest extends BaseDaoTest {
         // Clean up
         boolean deleted = knowledgeBaseDao.delete(createdKnowledgeBase.getId());
         assertTrue("Knowledge base should be deleted successfully", deleted);
+    }
+    
+    /**
+     * Test the findByCompanyName method.
+     */
+    @Test
+    public void testFindByCompanyName() throws SQLException {
+        // Find knowledge bases by company name
+        List<KnowledgeBase> knowledgeBases = knowledgeBaseDao.findByCompanyName("Test Company 1");
+        
+        // Verify there are knowledge bases
+        assertFalse("There should be knowledge bases for Test Company 1", knowledgeBases.isEmpty());
+        
+        // Verify all entries have the correct company ID
+        for (KnowledgeBase knowledgeBase : knowledgeBases) {
+            assertEquals("Knowledge base company ID should match Test Company 1", getCompanyId("Test Company 1"), knowledgeBase.getCompanyId());
+        }
+    }
+    
+    /**
+     * Test the findByAgentName method.
+     */
+    @Test
+    public void testFindByAgentName() throws SQLException {
+        // Find knowledge bases by agent name
+        List<KnowledgeBase> knowledgeBases = knowledgeBaseDao.findByAgentName("Test Agent 1");
+        
+        // Verify there are knowledge bases
+        assertFalse("There should be knowledge bases for Test Agent 1", knowledgeBases.isEmpty());
+    }
+    
+    /**
+     * Helper method to get the ID of a company by name.
+     */
+    private Integer getCompanyId(String name) throws SQLException {
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT id FROM companies WHERE name = ?")) {
+            ps.setString(1, name);
+            var rs = ps.executeQuery();
+            return rs.next() ? rs.getInt("id") : null;
+        }
+    }
+    
+    /**
+     * Helper method to get the ID of an agent by name.
+     */
+    private Integer getAgentId(String name) throws SQLException {
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT id FROM agents WHERE name = ?")) {
+            ps.setString(1, name);
+            var rs = ps.executeQuery();
+            return rs.next() ? rs.getInt("id") : null;
+        }
     }
 }
