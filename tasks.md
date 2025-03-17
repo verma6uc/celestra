@@ -11,7 +11,7 @@
     - Identify required vs. optional fields
     - Document enum values and their constraints
 
-- [ ] **Review application features to understand data requirements**
+- [x] **Review application features to understand data requirements**
   - **Why**: The seeded data should support the application features and use cases to enable effective testing and demonstration.
   - **What**: Read the feature documentation in `/Users/nupurbhaisare/celestra-workspace/celestra/docs/features` to:
     - Understand how each table is used in the application
