@@ -41,33 +41,33 @@ public class CompanyDaoImpl extends AbstractBaseDao<Company, Integer> implements
             STATUS_COLUMN + ", " + 
             CREATED_AT_COLUMN + ", " + 
             UPDATED_AT_COLUMN + 
-            ") VALUES (?, ?, ?, ?, ?, ?, ?)";
+            ") VALUES (?, ?, ?::company_size, ?::company_vertical, ?::company_status, ?, ?)";
     
     private static final String UPDATE_SQL = 
             "UPDATE " + TABLE_NAME + " SET " + 
             NAME_COLUMN + " = ?, " + 
             DESCRIPTION_COLUMN + " = ?, " + 
-            SIZE_COLUMN + " = ?, " + 
-            VERTICAL_COLUMN + " = ?, " + 
-            STATUS_COLUMN + " = ?, " + 
+            SIZE_COLUMN + " = ?::company_size, " + 
+            VERTICAL_COLUMN + " = ?::company_vertical, " + 
+            STATUS_COLUMN + " = ?::company_status, " + 
             UPDATED_AT_COLUMN + " = ? " + 
             "WHERE " + ID_COLUMN + " = ?";
     
     private static final String FIND_BY_STATUS_SQL = 
-            "SELECT * FROM " + TABLE_NAME + " WHERE " + STATUS_COLUMN + " = ?";
+            "SELECT * FROM " + TABLE_NAME + " WHERE " + STATUS_COLUMN + " = ?::company_status";
     
     private static final String FIND_BY_NAME_CONTAINING_SQL = 
             "SELECT * FROM " + TABLE_NAME + " WHERE " + NAME_COLUMN + " LIKE ?";
     
     private static final String FIND_BY_VERTICAL_SQL = 
-            "SELECT * FROM " + TABLE_NAME + " WHERE " + VERTICAL_COLUMN + " = ?";
+            "SELECT * FROM " + TABLE_NAME + " WHERE " + VERTICAL_COLUMN + " = ?::company_vertical";
     
     private static final String FIND_BY_SIZE_SQL = 
-            "SELECT * FROM " + TABLE_NAME + " WHERE " + SIZE_COLUMN + " = ?";
+            "SELECT * FROM " + TABLE_NAME + " WHERE " + SIZE_COLUMN + " = ?::company_size";
     
     private static final String UPDATE_STATUS_SQL = 
             "UPDATE " + TABLE_NAME + " SET " + 
-            STATUS_COLUMN + " = ?, " + 
+            STATUS_COLUMN + " = ?::company_status, " + 
             UPDATED_AT_COLUMN + " = ? " + 
             "WHERE " + ID_COLUMN + " = ?";
     

@@ -62,13 +62,11 @@
 
 ## Testing
 
-- [x] **Create test classes for each DAO**
+- [x] **Create JUnit test classes for each DAO**
   - **Why**: Verify that each DAO correctly implements the required operations and interacts properly with the database.
-  - **What**: For each DAO, create a test class in the test package that:
-    - Contains a main method as the entry point
+  - **What**: For each DAO, create a JUnit test class in the test package that:
     - Includes test cases for all DAO methods
     - Sets up test data
-    - Executes each method and verifies results
+    - Executes each method and verifies results using assertions
     - Tests enum value conversions to ensure they work correctly in both directions
     - Cleans up test data to avoid affecting other tests
-    - Outputs clear success/failure information
