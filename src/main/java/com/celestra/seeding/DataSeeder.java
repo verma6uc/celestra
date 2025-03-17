@@ -9,6 +9,8 @@ import com.celestra.seeding.seeders.AgentKnowledgeBaseSeeder;
 import com.celestra.seeding.seeders.AuditLogSeeder;
 import com.celestra.seeding.seeders.FailedLoginSeeder;
 import com.celestra.seeding.seeders.KnowledgeSourceSeeder;
+import com.celestra.seeding.seeders.UserLockoutSeeder;
+import com.celestra.seeding.seeders.UserSessionSeeder;
 import com.celestra.seeding.seeders.UserSeeder;
 import com.celestra.seeding.util.FakerUtil;
 import com.celestra.seeding.util.EnumUtil;
@@ -59,6 +61,8 @@ public class DataSeeder {
     private static List<Integer> agentKnowledgeBaseIds;
     private static List<Integer> auditLogIds;
     private static List<Integer> failedLoginIds;
+    private static List<Integer> userSessionIds;
+    private static List<Integer> userLockoutIds;
     private static List<Integer> knowledgeSourceIds;
     /**
      * Main method to run the data seeding process.
@@ -373,8 +377,11 @@ public class DataSeeder {
      */
     private static void seedUserLockouts(Connection connection) throws SQLException {
         LOGGER.info("Seeding user_lockouts table...");
-        // TODO: Implement user lockout seeding
-        LOGGER.info("Seeded " + NUM_USER_LOCKOUTS + " user lockouts.");
+        
+        UserLockoutSeeder userLockoutSeeder = new UserLockoutSeeder(connection, NUM_USER_LOCKOUTS, userIds);
+        userLockoutIds = userLockoutSeeder.seed();
+        
+        LOGGER.info("Seeded " + userLockoutIds.size() + " user lockouts.");
     }
     
     /**
@@ -385,8 +392,11 @@ public class DataSeeder {
      */
     private static void seedUserSessions(Connection connection) throws SQLException {
         LOGGER.info("Seeding user_sessions table...");
-        // TODO: Implement user session seeding
-        LOGGER.info("Seeded " + NUM_USER_SESSIONS + " user sessions.");
+        
+        UserSessionSeeder userSessionSeeder = new UserSessionSeeder(connection, NUM_USER_SESSIONS, userIds);
+        userSessionIds = userSessionSeeder.seed();
+        
+        LOGGER.info("Seeded " + userSessionIds.size() + " user sessions.");
     }
     
     /**

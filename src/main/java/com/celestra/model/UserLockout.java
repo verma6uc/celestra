@@ -1,6 +1,6 @@
 package com.celestra.model;
 
-import java.time.OffsetDateTime;
+import java.sql.Timestamp;
 import java.util.Objects;
 
 /**
@@ -10,12 +10,12 @@ import java.util.Objects;
 public class UserLockout {
     private Integer id;
     private Integer userId;
-    private OffsetDateTime lockoutStart;
-    private OffsetDateTime lockoutEnd;
+    private Timestamp lockoutStart;
+    private Timestamp lockoutEnd;
     private Integer failedAttempts;
     private String reason;
-    private OffsetDateTime createdAt;
-    private OffsetDateTime updatedAt;
+    private Timestamp createdAt;
+    private Timestamp updatedAt;
     
     // Reference to the associated user (not stored in database)
     private User user;
@@ -36,7 +36,7 @@ public class UserLockout {
     public UserLockout(Integer userId, Integer failedAttempts) {
         this.userId = userId;
         this.failedAttempts = failedAttempts;
-        this.lockoutStart = OffsetDateTime.now();
+        this.lockoutStart = new Timestamp(System.currentTimeMillis());
     }
     
     /**
@@ -51,9 +51,9 @@ public class UserLockout {
      * @param createdAt The creation timestamp
      * @param updatedAt The last update timestamp
      */
-    public UserLockout(Integer id, Integer userId, OffsetDateTime lockoutStart, 
-                      OffsetDateTime lockoutEnd, Integer failedAttempts, String reason, 
-                      OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+    public UserLockout(Integer id, Integer userId, Timestamp lockoutStart, 
+                      Timestamp lockoutEnd, Integer failedAttempts, String reason, 
+                      Timestamp createdAt, Timestamp updatedAt) {
         this.id = id;
         this.userId = userId;
         this.lockoutStart = lockoutStart;
@@ -82,19 +82,19 @@ public class UserLockout {
         this.userId = userId;
     }
 
-    public OffsetDateTime getLockoutStart() {
+    public Timestamp getLockoutStart() {
         return lockoutStart;
     }
 
-    public void setLockoutStart(OffsetDateTime lockoutStart) {
+    public void setLockoutStart(Timestamp lockoutStart) {
         this.lockoutStart = lockoutStart;
     }
 
-    public OffsetDateTime getLockoutEnd() {
+    public Timestamp getLockoutEnd() {
         return lockoutEnd;
     }
 
-    public void setLockoutEnd(OffsetDateTime lockoutEnd) {
+    public void setLockoutEnd(Timestamp lockoutEnd) {
         this.lockoutEnd = lockoutEnd;
     }
 
@@ -114,19 +114,19 @@ public class UserLockout {
         this.reason = reason;
     }
 
-    public OffsetDateTime getCreatedAt() {
+    public Timestamp getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(OffsetDateTime createdAt) {
+    public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }
 
-    public OffsetDateTime getUpdatedAt() {
+    public Timestamp getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(OffsetDateTime updatedAt) {
+    public void setUpdatedAt(Timestamp updatedAt) {
         this.updatedAt = updatedAt;
     }
     
@@ -156,9 +156,9 @@ public class UserLockout {
      * @return true if the lockout is currently active, false otherwise
      */
     public boolean isActive() {
-        OffsetDateTime now = OffsetDateTime.now();
-        return lockoutStart.isBefore(now) && 
-               (lockoutEnd == null || lockoutEnd.isAfter(now));
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        return lockoutStart.before(now) && 
+               (lockoutEnd == null || lockoutEnd.after(now));
     }
     
     /**
@@ -167,7 +167,8 @@ public class UserLockout {
      * @return true if the lockout has expired, false otherwise
      */
     public boolean isExpired() {
-        return lockoutEnd != null && lockoutEnd.isBefore(OffsetDateTime.now());
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        return lockoutEnd != null && lockoutEnd.before(now);
     }
     
     @Override

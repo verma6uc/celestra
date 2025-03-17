@@ -3,7 +3,7 @@ package com.celestra.dao.impl;
 import static org.junit.Assert.*;
 
 import java.sql.SQLException;
-import java.time.OffsetDateTime;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
 
@@ -76,8 +76,10 @@ public class UserLockoutDaoImplTest extends BaseDaoTest {
         // Create a new user lockout
         UserLockout userLockout = new UserLockout();
         userLockout.setUserId(999);
-        userLockout.setLockoutStart(OffsetDateTime.now());
-        userLockout.setLockoutEnd(OffsetDateTime.now().plusHours(1));
+        
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        userLockout.setLockoutStart(now);
+        userLockout.setLockoutEnd(new Timestamp(now.getTime() + 3600000)); // +1 hour in milliseconds
         userLockout.setFailedAttempts(3);
         userLockout.setReason("Test create lockout");
         
@@ -136,8 +138,10 @@ public class UserLockoutDaoImplTest extends BaseDaoTest {
         // Create a new user lockout
         UserLockout userLockout = new UserLockout();
         userLockout.setUserId(999);
-        userLockout.setLockoutStart(OffsetDateTime.now());
-        userLockout.setLockoutEnd(OffsetDateTime.now().plusHours(1));
+        
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        userLockout.setLockoutStart(now);
+        userLockout.setLockoutEnd(new Timestamp(now.getTime() + 3600000)); // +1 hour in milliseconds
         userLockout.setFailedAttempts(3);
         userLockout.setReason("Test update lockout");
         
@@ -166,8 +170,10 @@ public class UserLockoutDaoImplTest extends BaseDaoTest {
         // Create a new user lockout
         UserLockout userLockout = new UserLockout();
         userLockout.setUserId(999);
-        userLockout.setLockoutStart(OffsetDateTime.now());
-        userLockout.setLockoutEnd(OffsetDateTime.now().plusHours(1));
+        
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        userLockout.setLockoutStart(now);
+        userLockout.setLockoutEnd(new Timestamp(now.getTime() + 3600000)); // +1 hour in milliseconds
         userLockout.setFailedAttempts(3);
         userLockout.setReason("Test delete lockout");
         
@@ -290,15 +296,17 @@ public class UserLockoutDaoImplTest extends BaseDaoTest {
         // Create a new user lockout
         UserLockout userLockout = new UserLockout();
         userLockout.setUserId(999);
-        userLockout.setLockoutStart(OffsetDateTime.now());
-        userLockout.setLockoutEnd(OffsetDateTime.now().plusHours(1));
+        
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        userLockout.setLockoutStart(now);
+        userLockout.setLockoutEnd(new Timestamp(now.getTime() + 3600000)); // +1 hour in milliseconds
         userLockout.setFailedAttempts(3);
         userLockout.setReason("Test update lockout end");
         
         UserLockout createdUserLockout = userLockoutDao.create(userLockout);
         
         // Update the lockout end time
-        OffsetDateTime newLockoutEnd = OffsetDateTime.now().plusDays(7);
+        Timestamp newLockoutEnd = new Timestamp(System.currentTimeMillis() + 7 * 24 * 60 * 60 * 1000); // +7 days in milliseconds
         boolean updated = userLockoutDao.updateLockoutEnd(createdUserLockout.getId(), newLockoutEnd);
         
         // Verify the lockout end time was updated
@@ -306,8 +314,9 @@ public class UserLockoutDaoImplTest extends BaseDaoTest {
         
         Optional<UserLockout> updatedUserLockout = userLockoutDao.findById(createdUserLockout.getId());
         assertTrue("Lockout should be found after end time update", updatedUserLockout.isPresent());
+        Timestamp sixDaysFromNow = new Timestamp(System.currentTimeMillis() + 6 * 24 * 60 * 60 * 1000); // +6 days in milliseconds
         assertTrue("Lockout end time should be updated", 
-                   updatedUserLockout.get().getLockoutEnd().isAfter(OffsetDateTime.now().plusDays(6)));
+                   updatedUserLockout.get().getLockoutEnd().after(sixDaysFromNow));
         
         // Clean up
         boolean deleted = userLockoutDao.delete(createdUserLockout.getId());
@@ -322,8 +331,10 @@ public class UserLockoutDaoImplTest extends BaseDaoTest {
         // Create a new user lockout
         UserLockout userLockout = new UserLockout();
         userLockout.setUserId(999);
-        userLockout.setLockoutStart(OffsetDateTime.now());
-        userLockout.setLockoutEnd(OffsetDateTime.now().plusHours(1));
+        
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        userLockout.setLockoutStart(now);
+        userLockout.setLockoutEnd(new Timestamp(now.getTime() + 3600000)); // +1 hour in milliseconds
         userLockout.setFailedAttempts(3);
         userLockout.setReason("Test update failed attempts");
         
@@ -368,8 +379,10 @@ public class UserLockoutDaoImplTest extends BaseDaoTest {
         // Create a new user lockout for user 998
         UserLockout userLockout = new UserLockout();
         userLockout.setUserId(998);
-        userLockout.setLockoutStart(OffsetDateTime.now());
-        userLockout.setLockoutEnd(OffsetDateTime.now().plusHours(1));
+        
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        userLockout.setLockoutStart(now);
+        userLockout.setLockoutEnd(new Timestamp(now.getTime() + 3600000)); // +1 hour in milliseconds
         userLockout.setFailedAttempts(3);
         userLockout.setReason("Test delete by user ID");
         

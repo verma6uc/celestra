@@ -1,7 +1,7 @@
 package com.celestra.dao;
 
 import java.sql.SQLException;
-import java.time.OffsetDateTime;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
 
@@ -70,7 +70,7 @@ public interface UserLockoutDao extends BaseDao<UserLockout, Integer> {
      * @return true if the update was successful, false otherwise
      * @throws SQLException if a database access error occurs
      */
-    boolean updateLockoutEnd(Integer id, OffsetDateTime lockoutEnd) throws SQLException;
+    boolean updateLockoutEnd(Integer id, Timestamp lockoutEnd) throws SQLException;
     
     /**
      * Update the failed attempts count.

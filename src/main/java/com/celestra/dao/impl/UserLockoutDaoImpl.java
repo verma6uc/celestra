@@ -6,8 +6,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -129,12 +127,12 @@ public class UserLockoutDaoImpl extends AbstractBaseDao<UserLockout, Integer> im
         
         Timestamp lockoutStartTimestamp = rs.getTimestamp(LOCKOUT_START_COLUMN);
         if (lockoutStartTimestamp != null) {
-            userLockout.setLockoutStart(lockoutStartTimestamp.toInstant().atOffset(OffsetDateTime.now().getOffset()));
+            userLockout.setLockoutStart(lockoutStartTimestamp);
         }
         
         Timestamp lockoutEndTimestamp = rs.getTimestamp(LOCKOUT_END_COLUMN);
         if (lockoutEndTimestamp != null) {
-            userLockout.setLockoutEnd(lockoutEndTimestamp.toInstant().atOffset(OffsetDateTime.now().getOffset()));
+            userLockout.setLockoutEnd(lockoutEndTimestamp);
         }
         
         userLockout.setFailedAttempts(rs.getInt(FAILED_ATTEMPTS_COLUMN));
@@ -142,12 +140,12 @@ public class UserLockoutDaoImpl extends AbstractBaseDao<UserLockout, Integer> im
         
         Timestamp createdAtTimestamp = rs.getTimestamp(CREATED_AT_COLUMN);
         if (createdAtTimestamp != null) {
-            userLockout.setCreatedAt(createdAtTimestamp.toInstant().atOffset(OffsetDateTime.now().getOffset()));
+            userLockout.setCreatedAt(createdAtTimestamp);
         }
         
         Timestamp updatedAtTimestamp = rs.getTimestamp(UPDATED_AT_COLUMN);
         if (updatedAtTimestamp != null) {
-            userLockout.setUpdatedAt(updatedAtTimestamp.toInstant().atOffset(OffsetDateTime.now().getOffset()));
+            userLockout.setUpdatedAt(updatedAtTimestamp);
         }
         
         return userLockout;
@@ -158,13 +156,13 @@ public class UserLockoutDaoImpl extends AbstractBaseDao<UserLockout, Integer> im
         ps.setInt(1, userLockout.getUserId());
         
         if (userLockout.getLockoutStart() != null) {
-            ps.setTimestamp(2, Timestamp.from(userLockout.getLockoutStart().toInstant()));
+            ps.setTimestamp(2, userLockout.getLockoutStart());
         } else {
             ps.setTimestamp(2, new Timestamp(System.currentTimeMillis()));
         }
         
         if (userLockout.getLockoutEnd() != null) {
-            ps.setTimestamp(3, Timestamp.from(userLockout.getLockoutEnd().toInstant()));
+            ps.setTimestamp(3, userLockout.getLockoutEnd());
         } else {
             ps.setNull(3, java.sql.Types.TIMESTAMP);
         }
@@ -175,13 +173,13 @@ public class UserLockoutDaoImpl extends AbstractBaseDao<UserLockout, Integer> im
         Timestamp now = new Timestamp(System.currentTimeMillis());
         
         if (userLockout.getCreatedAt() != null) {
-            ps.setTimestamp(6, Timestamp.from(userLockout.getCreatedAt().toInstant()));
+            ps.setTimestamp(6, userLockout.getCreatedAt());
         } else {
             ps.setTimestamp(6, now);
         }
         
         if (userLockout.getUpdatedAt() != null) {
-            ps.setTimestamp(7, Timestamp.from(userLockout.getUpdatedAt().toInstant()));
+            ps.setTimestamp(7, userLockout.getUpdatedAt());
         } else {
             ps.setTimestamp(7, now);
         }
@@ -192,13 +190,13 @@ public class UserLockoutDaoImpl extends AbstractBaseDao<UserLockout, Integer> im
         ps.setInt(1, userLockout.getUserId());
         
         if (userLockout.getLockoutStart() != null) {
-            ps.setTimestamp(2, Timestamp.from(userLockout.getLockoutStart().toInstant()));
+            ps.setTimestamp(2, userLockout.getLockoutStart());
         } else {
             ps.setTimestamp(2, new Timestamp(System.currentTimeMillis()));
         }
         
         if (userLockout.getLockoutEnd() != null) {
-            ps.setTimestamp(3, Timestamp.from(userLockout.getLockoutEnd().toInstant()));
+            ps.setTimestamp(3, userLockout.getLockoutEnd());
         } else {
             ps.setNull(3, java.sql.Types.TIMESTAMP);
         }
@@ -209,7 +207,7 @@ public class UserLockoutDaoImpl extends AbstractBaseDao<UserLockout, Integer> im
         Timestamp now = new Timestamp(System.currentTimeMillis());
         
         if (userLockout.getUpdatedAt() != null) {
-            ps.setTimestamp(6, Timestamp.from(userLockout.getUpdatedAt().toInstant()));
+            ps.setTimestamp(6, userLockout.getUpdatedAt());
         } else {
             ps.setTimestamp(6, now);
         }
@@ -311,12 +309,12 @@ public class UserLockoutDaoImpl extends AbstractBaseDao<UserLockout, Integer> im
     }
     
     @Override
-    public boolean updateLockoutEnd(Integer id, OffsetDateTime lockoutEnd) throws SQLException {
+    public boolean updateLockoutEnd(Integer id, Timestamp lockoutEnd) throws SQLException {
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(UPDATE_LOCKOUT_END_SQL)) {
             
             if (lockoutEnd != null) {
-                ps.setTimestamp(1, Timestamp.from(lockoutEnd.toInstant()));
+                ps.setTimestamp(1, lockoutEnd);
             } else {
                 ps.setNull(1, java.sql.Types.TIMESTAMP);
             }
