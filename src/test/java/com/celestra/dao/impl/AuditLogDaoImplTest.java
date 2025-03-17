@@ -350,6 +350,25 @@ public class AuditLogDaoImplTest extends BaseDaoTest {
     }
     
     /**
+     * Test the findByEventDescription method.
+     */
+    @Test
+    public void testFindByEventDescription() throws SQLException {
+        // Find audit log by event description
+        Optional<AuditLog> auditLog = auditLogDao.findByEventDescription("User login");
+        
+        // Verify the audit log was found
+        assertTrue("Audit log should be found by event description", auditLog.isPresent());
+        assertEquals("Found audit log event description should match", "User login", auditLog.get().getEventDescription());
+        
+        // Test with a non-existent event description
+        Optional<AuditLog> nonExistentAuditLog = auditLogDao.findByEventDescription("Non-existent event");
+        
+        // Verify the audit log was not found
+        assertFalse("Non-existent audit log should not be found", nonExistentAuditLog.isPresent());
+    }
+    
+    /**
      * Helper method to get the ID of a user by email.
      * 
      * @param email The email of the user

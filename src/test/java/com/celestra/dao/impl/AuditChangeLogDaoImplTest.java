@@ -3,8 +3,6 @@ package com.celestra.dao.impl;
 import static org.junit.Assert.*;
 
 import java.sql.SQLException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -13,10 +11,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.celestra.dao.AuditChangeLogDao;
+import com.celestra.dao.AuditLogDao;
 import com.celestra.dao.BaseDaoTest;
-import com.celestra.enums.AuditEventType;
 import com.celestra.model.AuditChangeLog;
-import com.celestra.db.DatabaseUtil;
+import com.celestra.model.AuditLog;
 
 /**
  * Test class for AuditChangeLogDaoImpl.
@@ -24,12 +22,14 @@ import com.celestra.db.DatabaseUtil;
 public class AuditChangeLogDaoImplTest extends BaseDaoTest {
     
     private AuditChangeLogDao auditChangeLogDao;
+    private AuditLogDao auditLogDao;
     
     /**
      * Initialize the DAO before each test.
      */
     @Before
     public void initialize() {
+        auditLogDao = new AuditLogDaoImpl();
         auditChangeLogDao = new AuditChangeLogDaoImpl();
     }
     
@@ -84,7 +84,8 @@ public class AuditChangeLogDaoImplTest extends BaseDaoTest {
     public void testCreate() throws SQLException {
         // Create a new audit change log
         AuditChangeLog auditChangeLog = new AuditChangeLog();
-        auditChangeLog.setAuditLogId(getAuditLogId("Updated company settings"));
+        Optional<AuditLog> auditLog = auditLogDao.findByEventDescription("Updated company settings");
+        auditChangeLog.setAuditLogId(auditLog.get().getId());
         auditChangeLog.setColumnName("Test Column");
         auditChangeLog.setOldValue("Old Value");
         auditChangeLog.setNewValue("New Value");
@@ -142,7 +143,8 @@ public class AuditChangeLogDaoImplTest extends BaseDaoTest {
     public void testUpdate() throws SQLException {
         // Create a new audit change log
         AuditChangeLog auditChangeLog = new AuditChangeLog();
-        auditChangeLog.setAuditLogId(getAuditLogId("Updated company settings"));
+        Optional<AuditLog> auditLog = auditLogDao.findByEventDescription("Updated company settings");
+        auditChangeLog.setAuditLogId(auditLog.get().getId());
         auditChangeLog.setColumnName("Test Column Update");
         auditChangeLog.setOldValue("Old Value Update");
         auditChangeLog.setNewValue("New Value Update");
@@ -171,7 +173,8 @@ public class AuditChangeLogDaoImplTest extends BaseDaoTest {
     public void testDelete() throws SQLException {
         // Create a new audit change log
         AuditChangeLog auditChangeLog = new AuditChangeLog();
-        auditChangeLog.setAuditLogId(getAuditLogId("Updated company settings"));
+        Optional<AuditLog> auditLog = auditLogDao.findByEventDescription("Updated company settings");
+        auditChangeLog.setAuditLogId(auditLog.get().getId());
         auditChangeLog.setColumnName("Test Column Delete");
         auditChangeLog.setOldValue("Old Value Delete");
         auditChangeLog.setNewValue("New Value Delete");
@@ -194,14 +197,15 @@ public class AuditChangeLogDaoImplTest extends BaseDaoTest {
     @Test
     public void testFindByAuditLogId() throws SQLException {
         // Find audit change logs by audit log ID
-        List<AuditChangeLog> auditChangeLogs = auditChangeLogDao.findByAuditLogId(getAuditLogId("Updated company settings"));
+        Optional<AuditLog> auditLog = auditLogDao.findByEventDescription("Updated company settings");
+        List<AuditChangeLog> auditChangeLogs = auditChangeLogDao.findByAuditLogId(auditLog.get().getId());
         
         // Verify there are audit change logs
         assertFalse("There should be audit change logs for the audit log", auditChangeLogs.isEmpty());
         
         // Verify all entries have the correct audit log ID
         for (AuditChangeLog auditChangeLog : auditChangeLogs) {
-            assertEquals("Audit change log audit log ID should match", getAuditLogId("Updated company settings"), auditChangeLog.getAuditLogId());
+            assertEquals("Audit change log audit log ID should match", auditLog.get().getId(), auditChangeLog.getAuditLogId());
         }
     }
     
@@ -264,36 +268,16 @@ public class AuditChangeLogDaoImplTest extends BaseDaoTest {
     @Test
     public void testFindByAuditLogIdAndColumnName() throws SQLException {
         // Find audit change logs by audit log ID and column name
-        List<AuditChangeLog> auditChangeLogs = auditChangeLogDao.findByAuditLogIdAndColumnName(getAuditLogId("Updated company settings"), "name");
+        Optional<AuditLog> auditLog = auditLogDao.findByEventDescription("Updated company settings");
+        List<AuditChangeLog> auditChangeLogs = auditChangeLogDao.findByAuditLogIdAndColumnName(auditLog.get().getId(), "name");
         
         // Verify there are audit change logs
         assertFalse("There should be audit change logs for the audit log and column name 'name'", auditChangeLogs.isEmpty());
         
         // Verify all entries have the correct audit log ID and column name
         for (AuditChangeLog auditChangeLog : auditChangeLogs) {
-            assertEquals("Audit change log audit log ID should match", getAuditLogId("Updated company settings"), auditChangeLog.getAuditLogId());
+            assertEquals("Audit change log audit log ID should match", auditLog.get().getId(), auditChangeLog.getAuditLogId());
             assertEquals("Audit change log column name should be 'name'", "name", auditChangeLog.getColumnName());
-        }
-    }
-    
-    /**
-     * Helper method to get the ID of an audit log by event description.
-     * 
-     * @param eventDescription The event description of the audit log
-     * @return The ID of the audit log
-     * @throws SQLException if a database error occurs
-     */
-    private Integer getAuditLogId(String eventDescription) throws SQLException {
-        try (Connection conn = DatabaseUtil.getConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT id FROM audit_logs WHERE event_description = ?")) {
-            ps.setString(1, eventDescription);
-            try (var rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt("id");
-                } else {
-                    throw new SQLException("No audit log found with event description: " + eventDescription);
-                }
-            }
         }
     }
 }

@@ -3,6 +3,7 @@ package com.celestra.dao;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
+import java.util.Optional;
 
 import com.celestra.enums.AuditEventType;
 import com.celestra.model.AuditLog;
@@ -86,4 +87,13 @@ public interface AuditLogDao extends BaseDao<AuditLog, Integer> {
      * @throws SQLException if a database access error occurs
      */
     List<AuditLog> findByTableNameAndRecordId(String tableName, String recordId) throws SQLException;
+    
+    /**
+     * Find an audit log by event description.
+     * 
+     * @param eventDescription The event description to search for
+     * @return An Optional containing the audit log if found, or empty if not found
+     * @throws SQLException if a database access error occurs
+     */
+    Optional<AuditLog> findByEventDescription(String eventDescription) throws SQLException;
 }

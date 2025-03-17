@@ -8,6 +8,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.UUID;
+import java.util.Optional;
 
 import com.celestra.dao.AbstractBaseDao;
 import com.celestra.dao.AuditLogDao;
@@ -87,6 +88,9 @@ public class AuditLogDaoImpl extends AbstractBaseDao<AuditLog, Integer> implemen
     
     private static final String FIND_BY_TABLE_NAME_AND_RECORD_ID_SQL = 
             "SELECT * FROM " + TABLE_NAME + " WHERE " + TABLE_NAME_COLUMN + " = ? AND " + RECORD_ID_COLUMN + " = ?";
+    
+    private static final String FIND_BY_EVENT_DESCRIPTION_SQL = 
+            "SELECT * FROM " + TABLE_NAME + " WHERE " + EVENT_DESCRIPTION_COLUMN + " = ?";
     
     @Override
     protected String getTableName() {
@@ -306,5 +310,16 @@ public class AuditLogDaoImpl extends AbstractBaseDao<AuditLog, Integer> implemen
             ps.setString(1, tableName);
             ps.setString(2, recordId);
         });
+    }
+    
+    @Override
+    public Optional<AuditLog> findByEventDescription(String eventDescription) throws SQLException {
+        List<AuditLog> auditLogs = executeQuery(FIND_BY_EVENT_DESCRIPTION_SQL, ps -> 
+            ps.setString(1, eventDescription)
+        );
+        
+        return auditLogs.isEmpty() 
+                ? Optional.empty() 
+                : Optional.of(auditLogs.get(0));
     }
 }
