@@ -40,29 +40,29 @@ public class KnowledgeBaseDaoImplTest extends BaseDaoTest {
         cleanupTestData();
         
         // Insert test companies first (to satisfy foreign key constraints)
-        executeSQL("INSERT INTO companies (id, name, description, size, vertical, status, created_at, updated_at) " +
-                   "VALUES (1, 'Test Company 1', 'Test Company Description 1', 'SMALL'::company_size, 'TECH'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW())");
+        executeSQL("INSERT INTO companies (name, description, size, vertical, status, created_at, updated_at) " +
+                   "VALUES ('Test Company 1', 'Test Company Description 1', 'SMALL'::company_size, 'TECH'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW()) RETURNING id");
         
-        executeSQL("INSERT INTO companies (id, name, description, size, vertical, status, created_at, updated_at) " +
-                   "VALUES (2, 'Test Company 2', 'Test Company Description 2', 'MEDIUM'::company_size, 'PHARMACEUTICAL'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW())");
+        executeSQL("INSERT INTO companies (name, description, size, vertical, status, created_at, updated_at) " +
+                   "VALUES ('Test Company 2', 'Test Company Description 2', 'MEDIUM'::company_size, 'PHARMACEUTICAL'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW()) RETURNING id");
         
         // Insert test agents (needed for agent-knowledge base associations)
-        executeSQL("INSERT INTO agents (id, company_id, name, description, status, created_at, updated_at) " +
-                   "VALUES (1, 1, 'Test Agent 1', 'Test Agent Description 1', 'ACTIVE'::agent_status, NOW(), NOW())");
+        executeSQL("INSERT INTO agents (company_id, name, description, status, created_at, updated_at) " +
+                   "VALUES ((SELECT id FROM companies WHERE name = 'Test Company 1'), 'Test Agent 1', 'Test Agent Description 1', 'ACTIVE'::agent_status, NOW(), NOW()) RETURNING id");
         
         // Insert test knowledge bases
-        executeSQL("INSERT INTO knowledge_bases (id, company_id, name, description, status, created_at, updated_at) " +
-                   "VALUES (1, 1, 'Test KB 1', 'Test Description 1', 'ACTIVE'::knowledge_base_status, NOW(), NOW())");
+        executeSQL("INSERT INTO knowledge_bases (company_id, name, description, status, created_at, updated_at) " +
+                   "VALUES ((SELECT id FROM companies WHERE name = 'Test Company 1'), 'Test KB 1', 'Test Description 1', 'ACTIVE'::knowledge_base_status, NOW(), NOW()) RETURNING id");
         
-        executeSQL("INSERT INTO knowledge_bases (id, company_id, name, description, status, created_at, updated_at) " +
-                   "VALUES (2, 1, 'Test KB 2', 'Test Description 2', 'DRAFT'::knowledge_base_status, NOW(), NOW())");
+        executeSQL("INSERT INTO knowledge_bases (company_id, name, description, status, created_at, updated_at) " +
+                   "VALUES ((SELECT id FROM companies WHERE name = 'Test Company 1'), 'Test KB 2', 'Test Description 2', 'DRAFT'::knowledge_base_status, NOW(), NOW()) RETURNING id");
         
-        executeSQL("INSERT INTO knowledge_bases (id, company_id, name, description, status, created_at, updated_at) " +
-                   "VALUES (3, 2, 'Another KB', 'Another Description', 'ACTIVE'::knowledge_base_status, NOW(), NOW())");
+        executeSQL("INSERT INTO knowledge_bases (company_id, name, description, status, created_at, updated_at) " +
+                   "VALUES ((SELECT id FROM companies WHERE name = 'Test Company 2'), 'Another KB', 'Another Description', 'ACTIVE'::knowledge_base_status, NOW(), NOW()) RETURNING id");
         
         // Insert agent-knowledge base associations
         executeSQL("INSERT INTO agent_knowledge_bases (agent_id, knowledge_base_id, created_at) " +
-                   "VALUES (1, 1, NOW())");
+                   "VALUES ((SELECT id FROM agents WHERE name = 'Test Agent 1'), (SELECT id FROM knowledge_bases WHERE name = 'Test KB 1'), NOW())");
     }
     
     @Override
@@ -70,8 +70,8 @@ public class KnowledgeBaseDaoImplTest extends BaseDaoTest {
         executeSQL("DELETE FROM agent_knowledge_bases WHERE knowledge_base_id IN " +
                    "(SELECT id FROM knowledge_bases WHERE name LIKE 'Test KB%' OR name = 'Another KB')");
         executeSQL("DELETE FROM knowledge_bases WHERE name LIKE 'Test KB%' OR name = 'Another KB'");
-        executeSQL("DELETE FROM agents WHERE id = 1");
-        executeSQL("DELETE FROM companies WHERE id IN (1, 2)");
+        executeSQL("DELETE FROM agents WHERE name = 'Test Agent 1'");
+        executeSQL("DELETE FROM companies WHERE name LIKE 'Test Company%'");
     }
     
     /**

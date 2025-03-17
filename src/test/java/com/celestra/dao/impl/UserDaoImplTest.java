@@ -41,11 +41,11 @@ public class UserDaoImplTest extends BaseDaoTest {
         cleanupTestData();
         
         // Insert test companies first (to satisfy foreign key constraints)
-        executeSQL("INSERT INTO companies (id, name, description, size, vertical, status, created_at, updated_at) " +
-                   "VALUES (1, 'Test Company 1', 'Test Company Description 1', 'SMALL'::company_size, 'TECH'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW())");
+        executeSQL("INSERT INTO companies (name, description, size, vertical, status, created_at, updated_at) " +
+                   "VALUES ('Test Company 1', 'Test Company Description 1', 'SMALL'::company_size, 'TECH'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW()) RETURNING id");
         
-        executeSQL("INSERT INTO companies (id, name, description, size, vertical, status, created_at, updated_at) " +
-                   "VALUES (2, 'Test Company 2', 'Test Company Description 2', 'MEDIUM'::company_size, 'PHARMACEUTICAL'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW())");
+        executeSQL("INSERT INTO companies (name, description, size, vertical, status, created_at, updated_at) " +
+                   "VALUES ('Test Company 2', 'Test Company Description 2', 'MEDIUM'::company_size, 'PHARMACEUTICAL'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW()) RETURNING id");
         
         // Insert test users
         executeSQL("INSERT INTO users (company_id, role, email, name, password_hash, status, created_at, updated_at) " +
@@ -61,7 +61,7 @@ public class UserDaoImplTest extends BaseDaoTest {
     @Override
     protected void cleanupTestData() throws SQLException {
         executeSQL("DELETE FROM users WHERE email LIKE '%@test.com'");
-        executeSQL("DELETE FROM companies WHERE id IN (1, 2)");
+        executeSQL("DELETE FROM companies WHERE name LIKE 'Test Company%'");
     }
     
     /**
@@ -71,7 +71,7 @@ public class UserDaoImplTest extends BaseDaoTest {
     public void testCreate() throws SQLException {
         // Create a new user
         User user = new User();
-        user.setCompanyId(1);
+        user.setCompanyId(getCompanyId("Test Company 1"));
         user.setRole(UserRole.REGULAR_USER);
         user.setEmail("newuser@test.com");
         user.setName("New Test User");
@@ -131,7 +131,7 @@ public class UserDaoImplTest extends BaseDaoTest {
     public void testUpdate() throws SQLException {
         // Create a new user
         User user = new User();
-        user.setCompanyId(1);
+        user.setCompanyId(getCompanyId("Test Company 1"));
         user.setRole(UserRole.REGULAR_USER);
         user.setEmail("updateuser@test.com");
         user.setName("Update Test User");
@@ -162,7 +162,7 @@ public class UserDaoImplTest extends BaseDaoTest {
     public void testDelete() throws SQLException {
         // Create a new user
         User user = new User();
-        user.setCompanyId(1);
+        user.setCompanyId(getCompanyId("Test Company 1"));
         user.setRole(UserRole.REGULAR_USER);
         user.setEmail("deleteuser@test.com");
         user.setName("Delete Test User");
@@ -200,14 +200,14 @@ public class UserDaoImplTest extends BaseDaoTest {
     @Test
     public void testFindByCompanyId() throws SQLException {
         // Find users by company ID
-        List<User> users = userDao.findByCompanyId(1);
+        List<User> users = userDao.findByCompanyId(getCompanyId("Test Company 1"));
         
         // Verify there are users
-        assertFalse("There should be users for company ID 1", users.isEmpty());
+        assertFalse("There should be users for Test Company 1", users.isEmpty());
         
         // Verify all entries have the correct company ID
         for (User user : users) {
-            assertEquals("User company ID should be 1", Integer.valueOf(1), user.getCompanyId());
+            assertEquals("User company ID should match Test Company 1", getCompanyId("Test Company 1"), user.getCompanyId());
         }
     }
     
@@ -251,14 +251,14 @@ public class UserDaoImplTest extends BaseDaoTest {
     @Test
     public void testFindByCompanyIdAndRole() throws SQLException {
         // Find users by company ID and role
-        List<User> users = userDao.findByCompanyIdAndRole(1, UserRole.COMPANY_ADMIN);
+        List<User> users = userDao.findByCompanyIdAndRole(getCompanyId("Test Company 1"), UserRole.COMPANY_ADMIN);
         
         // Verify there are users
-        assertFalse("There should be admin users for company ID 1", users.isEmpty());
+        assertFalse("There should be admin users for Test Company 1", users.isEmpty());
         
         // Verify all entries have the correct company ID and role
         for (User user : users) {
-            assertEquals("User company ID should be 1", Integer.valueOf(1), user.getCompanyId());
+            assertEquals("User company ID should match Test Company 1", getCompanyId("Test Company 1"), user.getCompanyId());
             assertEquals("User role should be COMPANY_ADMIN", UserRole.COMPANY_ADMIN, user.getRole());
         }
     }
@@ -270,7 +270,7 @@ public class UserDaoImplTest extends BaseDaoTest {
     public void testUpdatePassword() throws SQLException {
         // Create a new user
         User user = new User();
-        user.setCompanyId(1);
+        user.setCompanyId(getCompanyId("Test Company 1"));
         user.setRole(UserRole.REGULAR_USER);
         user.setEmail("passworduser@test.com");
         user.setName("Password Test User");
@@ -299,7 +299,7 @@ public class UserDaoImplTest extends BaseDaoTest {
     public void testUpdateStatus() throws SQLException {
         // Create a new user
         User user = new User();
-        user.setCompanyId(1);
+        user.setCompanyId(getCompanyId("Test Company 1"));
         user.setRole(UserRole.REGULAR_USER);
         user.setEmail("statususer@test.com");
         user.setName("Status Test User");
@@ -328,7 +328,7 @@ public class UserDaoImplTest extends BaseDaoTest {
     public void testAuthenticate() throws SQLException {
         // Create a new user
         User user = new User();
-        user.setCompanyId(1);
+        user.setCompanyId(getCompanyId("Test Company 1"));
         user.setRole(UserRole.REGULAR_USER);
         user.setEmail("authuser@test.com");
         user.setName("Auth Test User");
@@ -347,5 +347,21 @@ public class UserDaoImplTest extends BaseDaoTest {
         // Clean up
         boolean deleted = userDao.delete(createdUser.getId());
         assertTrue("User should be deleted successfully", deleted);
+    }
+    
+    /**
+     * Helper method to get the ID of a company by name.
+     * 
+     * @param name The name of the company
+     * @return The ID of the company
+     * @throws SQLException if a database error occurs
+     */
+    private Integer getCompanyId(String name) throws SQLException {
+        try (var conn = com.celestra.db.DatabaseUtil.getConnection();
+             var ps = conn.prepareStatement("SELECT id FROM companies WHERE name = ?")) {
+            ps.setString(1, name);
+            var rs = ps.executeQuery();
+            return rs.next() ? rs.getInt("id") : null;
+        }
     }
 }
