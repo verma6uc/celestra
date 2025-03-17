@@ -23,29 +23,35 @@ public class FailedLoginDaoImpl extends AbstractBaseDao<FailedLogin, Integer> im
     private static final String ID_COLUMN = "id";
     private static final String USER_ID_COLUMN = "user_id";
     private static final String IP_ADDRESS_COLUMN = "ip_address";
+    private static final String EMAIL_COLUMN = "email";
     private static final String ATTEMPTED_AT_COLUMN = "attempted_at";
     private static final String FAILURE_REASON_COLUMN = "failure_reason";
     
     private static final String INSERT_SQL = 
             "INSERT INTO " + TABLE_NAME + " (" + 
             USER_ID_COLUMN + ", " + 
+            EMAIL_COLUMN + ", " + 
             IP_ADDRESS_COLUMN + ", " + 
             ATTEMPTED_AT_COLUMN + ", " + 
             FAILURE_REASON_COLUMN + 
-            ") VALUES (?, ?, ?, ?)";
+            ") VALUES (?, ?, ?, ?, ?)";
     
     private static final String UPDATE_SQL = 
             "UPDATE " + TABLE_NAME + " SET " + 
             USER_ID_COLUMN + " = ?, " + 
+            EMAIL_COLUMN + " = ?, " + 
             IP_ADDRESS_COLUMN + " = ?, " + 
             ATTEMPTED_AT_COLUMN + " = ?, " + 
-            FAILURE_REASON_COLUMN + " = ? " + 
+            FAILURE_REASON_COLUMN + " = ? " +
             "WHERE " + ID_COLUMN + " = ?";
     
     private static final String FIND_BY_USERNAME_SQL = 
             "SELECT f.* FROM " + TABLE_NAME + " f " +
             "JOIN users u ON f." + USER_ID_COLUMN + " = u.id " +
             "WHERE u.email = ? ORDER BY f." + ATTEMPTED_AT_COLUMN + " DESC";
+    
+    private static final String FIND_BY_EMAIL_SQL = 
+            "SELECT * FROM " + TABLE_NAME + " WHERE " + EMAIL_COLUMN + " = ? ORDER BY " + ATTEMPTED_AT_COLUMN + " DESC";
     
     private static final String FIND_BY_IP_ADDRESS_SQL = 
             "SELECT * FROM " + TABLE_NAME + " WHERE " + IP_ADDRESS_COLUMN + " = ? ORDER BY " + ATTEMPTED_AT_COLUMN + " DESC";
@@ -62,10 +68,18 @@ public class FailedLoginDaoImpl extends AbstractBaseDao<FailedLogin, Integer> im
             "WHERE u.email = ? AND f." + ATTEMPTED_AT_COLUMN + " > ? " +
             "ORDER BY f." + ATTEMPTED_AT_COLUMN + " DESC";
     
+    private static final String FIND_RECENT_BY_EMAIL_SQL = 
+            "SELECT * FROM " + TABLE_NAME + " WHERE " + EMAIL_COLUMN + " = ? AND " + 
+            ATTEMPTED_AT_COLUMN + " > ? ORDER BY " + ATTEMPTED_AT_COLUMN + " DESC";
+    
     private static final String COUNT_RECENT_BY_USERNAME_SQL = 
             "SELECT COUNT(*) FROM " + TABLE_NAME + " f " +
             "JOIN users u ON f." + USER_ID_COLUMN + " = u.id " +
             "WHERE u.email = ? AND f." + ATTEMPTED_AT_COLUMN + " > ?";
+    
+    private static final String COUNT_RECENT_BY_EMAIL_SQL = 
+            "SELECT COUNT(*) FROM " + TABLE_NAME + " WHERE " + EMAIL_COLUMN + " = ? AND " + 
+            ATTEMPTED_AT_COLUMN + " > ?";
     
     private static final String COUNT_RECENT_BY_IP_ADDRESS_SQL = 
             "SELECT COUNT(*) FROM " + TABLE_NAME + " WHERE " + IP_ADDRESS_COLUMN + " = ? AND " + 
@@ -105,6 +119,7 @@ public class FailedLoginDaoImpl extends AbstractBaseDao<FailedLogin, Integer> im
             failedLogin.setUserId(userId);
         }
         
+        failedLogin.setEmail(rs.getString(EMAIL_COLUMN));
         failedLogin.setIpAddress(rs.getString(IP_ADDRESS_COLUMN));
         failedLogin.setAttemptedAt(rs.getTimestamp(ATTEMPTED_AT_COLUMN));
         failedLogin.setFailureReason(rs.getString(FAILURE_REASON_COLUMN));
@@ -120,15 +135,21 @@ public class FailedLoginDaoImpl extends AbstractBaseDao<FailedLogin, Integer> im
             ps.setNull(1, java.sql.Types.INTEGER);
         }
         
-        ps.setString(2, failedLogin.getIpAddress());
-        
-        if (failedLogin.getAttemptedAt() != null) {
-            ps.setTimestamp(3, failedLogin.getAttemptedAt());
+        if (failedLogin.getEmail() != null) {
+            ps.setString(2, failedLogin.getEmail());
         } else {
-            ps.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
+            ps.setNull(2, java.sql.Types.VARCHAR);
         }
         
-        ps.setString(4, failedLogin.getFailureReason());
+        ps.setString(3, failedLogin.getIpAddress());
+        
+        if (failedLogin.getAttemptedAt() != null) {
+            ps.setTimestamp(4, failedLogin.getAttemptedAt());
+        } else {
+            ps.setTimestamp(4, new Timestamp(System.currentTimeMillis()));
+        }
+        
+        ps.setString(5, failedLogin.getFailureReason());
     }
     
     @Override
@@ -139,16 +160,22 @@ public class FailedLoginDaoImpl extends AbstractBaseDao<FailedLogin, Integer> im
             ps.setNull(1, java.sql.Types.INTEGER);
         }
         
-        ps.setString(2, failedLogin.getIpAddress());
-        
-        if (failedLogin.getAttemptedAt() != null) {
-            ps.setTimestamp(3, failedLogin.getAttemptedAt());
+        if (failedLogin.getEmail() != null) {
+            ps.setString(2, failedLogin.getEmail());
         } else {
-            ps.setTimestamp(3, new Timestamp(System.currentTimeMillis()));
+            ps.setNull(2, java.sql.Types.VARCHAR);
         }
         
-        ps.setString(4, failedLogin.getFailureReason());
-        ps.setInt(5, failedLogin.getId());
+        ps.setString(3, failedLogin.getIpAddress());
+        
+        if (failedLogin.getAttemptedAt() != null) {
+            ps.setTimestamp(4, failedLogin.getAttemptedAt());
+        } else {
+            ps.setTimestamp(4, new Timestamp(System.currentTimeMillis()));
+        }
+        
+        ps.setString(5, failedLogin.getFailureReason());
+        ps.setInt(6, failedLogin.getId());
     }
     
     @Override
@@ -199,6 +226,13 @@ public class FailedLoginDaoImpl extends AbstractBaseDao<FailedLogin, Integer> im
     }
     
     @Override
+    public List<FailedLogin> findByEmail(String email) throws SQLException {
+        return executeQuery(FIND_BY_EMAIL_SQL, ps -> 
+            ps.setString(1, email)
+        );
+    }
+    
+    @Override
     public List<FailedLogin> findByIpAddress(String ipAddress) throws SQLException {
         return executeQuery(FIND_BY_IP_ADDRESS_SQL, ps -> 
             ps.setString(1, ipAddress)
@@ -224,6 +258,17 @@ public class FailedLoginDaoImpl extends AbstractBaseDao<FailedLogin, Integer> im
     }
     
     @Override
+    public List<FailedLogin> findRecentByEmail(String email, int minutes) throws SQLException {
+        Timestamp cutoffTime = new Timestamp(System.currentTimeMillis() - (minutes * 60 * 1000L));
+        
+        return executeQuery(FIND_RECENT_BY_EMAIL_SQL, ps -> {
+            ps.setString(1, email);
+            ps.setTimestamp(2, cutoffTime);
+        });
+    }
+    
+    
+    @Override
     public int countRecentByUsername(String username, int minutes) throws SQLException {
         Timestamp cutoffTime = new Timestamp(System.currentTimeMillis() - (minutes * 60 * 1000L));
         
@@ -231,6 +276,26 @@ public class FailedLoginDaoImpl extends AbstractBaseDao<FailedLogin, Integer> im
              PreparedStatement ps = conn.prepareStatement(COUNT_RECENT_BY_USERNAME_SQL)) {
             
             ps.setString(1, username);
+            ps.setTimestamp(2, cutoffTime);
+            
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                } else {
+                    return 0;
+                }
+            }
+        }
+    }
+    
+    @Override
+    public int countRecentByEmail(String email, int minutes) throws SQLException {
+        Timestamp cutoffTime = new Timestamp(System.currentTimeMillis() - (minutes * 60 * 1000L));
+        
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(COUNT_RECENT_BY_EMAIL_SQL)) {
+            
+            ps.setString(1, email);
             ps.setTimestamp(2, cutoffTime);
             
             try (ResultSet rs = ps.executeQuery()) {

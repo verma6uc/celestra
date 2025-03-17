@@ -50,14 +50,14 @@ public class FailedLoginDaoImplTest extends BaseDaoTest {
         executeSQL("INSERT INTO users (company_id, role, email, name, password_hash, status, created_at, updated_at) " +
                    "VALUES ((SELECT id FROM companies WHERE name = 'Test Company 1'), 'REGULAR_USER'::user_role, 'testuser@test.com', 'Test User', 'hash123', 'ACTIVE'::user_status, NOW(), NOW()) RETURNING id");
         
-        executeSQL("INSERT INTO failed_logins (user_id, ip_address, attempted_at, failure_reason) " +
-                   "VALUES ((SELECT id FROM users WHERE email = 'testuser@test.com'), '192.168.1.1', NOW(), 'Invalid password')");
+        executeSQL("INSERT INTO failed_logins (user_id, email, ip_address, attempted_at, failure_reason) " +
+                   "VALUES ((SELECT id FROM users WHERE email = 'testuser@test.com'), 'testuser@test.com', '192.168.1.1', NOW(), 'Invalid password')");
         
-        executeSQL("INSERT INTO failed_logins (user_id, ip_address, attempted_at, failure_reason) " +
-                   "VALUES ((SELECT id FROM users WHERE email = 'testuser@test.com'), '192.168.1.2', NOW(), 'Account locked')");
+        executeSQL("INSERT INTO failed_logins (user_id, email, ip_address, attempted_at, failure_reason) " +
+                   "VALUES ((SELECT id FROM users WHERE email = 'testuser@test.com'), 'testuser@test.com', '192.168.1.2', NOW(), 'Account locked')");
         
-        executeSQL("INSERT INTO failed_logins (ip_address, attempted_at, failure_reason) " +
-                   "VALUES ('192.168.1.3', NOW(), 'User not found')");
+        executeSQL("INSERT INTO failed_logins (email, ip_address, attempted_at, failure_reason) " +
+                   "VALUES ('unknown@test.com', '192.168.1.3', NOW(), 'User not found')");
     }
     
     @Override
@@ -75,6 +75,7 @@ public class FailedLoginDaoImplTest extends BaseDaoTest {
         // Create a new failed login
         FailedLogin failedLogin = new FailedLogin();
         failedLogin.setIpAddress("192.168.1.100");
+        failedLogin.setEmail("test100@test.com");
         failedLogin.setFailureReason("Test failure reason");
         failedLogin.setAttemptedAt(new Timestamp(System.currentTimeMillis()));
         
@@ -133,6 +134,7 @@ public class FailedLoginDaoImplTest extends BaseDaoTest {
         // Create a new failed login
         FailedLogin failedLogin = new FailedLogin();
         failedLogin.setIpAddress("192.168.1.101");
+        failedLogin.setEmail("test101@test.com");
         failedLogin.setFailureReason("Test update reason");
         failedLogin.setAttemptedAt(new Timestamp(System.currentTimeMillis()));
         
@@ -140,12 +142,14 @@ public class FailedLoginDaoImplTest extends BaseDaoTest {
         
         // Update the failed login
         createdFailedLogin.setIpAddress("192.168.1.102");
+        createdFailedLogin.setEmail("test102@test.com");
         createdFailedLogin.setFailureReason("Updated test reason");
         
         FailedLogin updatedFailedLogin = failedLoginDao.update(createdFailedLogin);
         
         // Verify the failed login was updated
         assertEquals("Failed login IP address should be updated", "192.168.1.102", updatedFailedLogin.getIpAddress());
+        assertEquals("Failed login email should be updated", "test102@test.com", updatedFailedLogin.getEmail());
         assertEquals("Failed login reason should be updated", "Updated test reason", updatedFailedLogin.getFailureReason());
         
         // Clean up
@@ -161,6 +165,7 @@ public class FailedLoginDaoImplTest extends BaseDaoTest {
         // Create a new failed login
         FailedLogin failedLogin = new FailedLogin();
         failedLogin.setIpAddress("192.168.1.103");
+        failedLogin.setEmail("test103@test.com");
         failedLogin.setFailureReason("Test delete reason");
         failedLogin.setAttemptedAt(new Timestamp(System.currentTimeMillis()));
         
@@ -186,6 +191,18 @@ public class FailedLoginDaoImplTest extends BaseDaoTest {
         
         // Verify there are failed logins
         assertFalse("There should be failed logins for username 'testuser@test.com'", failedLogins.isEmpty());
+    }
+    
+    /**
+     * Test the findByEmail method.
+     */
+    @Test
+    public void testFindByEmail() throws SQLException {
+        // Find failed logins by email
+        List<FailedLogin> failedLogins = failedLoginDao.findByEmail("unknown@test.com");
+        
+        // Verify there are failed logins
+        assertFalse("There should be failed logins for email 'unknown@test.com'", failedLogins.isEmpty());
     }
     
     /**
@@ -225,6 +242,18 @@ public class FailedLoginDaoImplTest extends BaseDaoTest {
     }
     
     /**
+     * Test the findRecentByEmail method.
+     */
+    @Test
+    public void testFindRecentByEmail() throws SQLException {
+        // Find recent failed logins by email
+        List<FailedLogin> failedLogins = failedLoginDao.findRecentByEmail("unknown@test.com", 60);
+        
+        // Verify there are failed logins
+        assertFalse("There should be recent failed logins for email 'unknown@test.com'", failedLogins.isEmpty());
+    }
+    
+    /**
      * Test the countRecentByUsername method.
      */
     @Test
@@ -234,6 +263,18 @@ public class FailedLoginDaoImplTest extends BaseDaoTest {
         
         // Verify there are failed logins
         assertTrue("There should be recent failed logins for username 'testuser@test.com'", count > 0);
+    }
+    
+    /**
+     * Test the countRecentByEmail method.
+     */
+    @Test
+    public void testCountRecentByEmail() throws SQLException {
+        // Count recent failed logins by email
+        int count = failedLoginDao.countRecentByEmail("unknown@test.com", 60);
+        
+        // Verify there are failed logins
+        assertTrue("There should be recent failed logins for email 'unknown@test.com'", count > 0);
     }
     
     /**
@@ -256,6 +297,7 @@ public class FailedLoginDaoImplTest extends BaseDaoTest {
         // Create a new failed login with a timestamp in the past
         FailedLogin failedLogin = new FailedLogin();
         failedLogin.setIpAddress("192.168.1.104");
+        failedLogin.setEmail("test104@test.com");
         failedLogin.setFailureReason("Test old record");
         
         // Set timestamp to 10 days ago

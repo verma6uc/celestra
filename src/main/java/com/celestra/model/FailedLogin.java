@@ -11,6 +11,7 @@ public class FailedLogin {
     private Integer id;
     private Integer userId;
     private String ipAddress;
+    private String email;
     private Timestamp attemptedAt;
     private String failureReason;
     
@@ -30,8 +31,9 @@ public class FailedLogin {
      * @param ipAddress The IP address where login attempt originated
      * @param failureReason The description of why authentication failed
      */
-    public FailedLogin(String ipAddress, String failureReason) {
+    public FailedLogin(String ipAddress, String email, String failureReason) {
         this.ipAddress = ipAddress;
+        this.email = email;
         this.failureReason = failureReason;
     }
     
@@ -40,15 +42,17 @@ public class FailedLogin {
      * 
      * @param id The failed login record ID
      * @param userId The ID of the user account (if known/valid)
+     * @param email The email address used in the login attempt
      * @param ipAddress The IP address where login attempt originated
      * @param attemptedAt The timestamp when login attempt occurred
      * @param failureReason The description of why authentication failed
      */
-    public FailedLogin(Integer id, Integer userId, String ipAddress, 
+    public FailedLogin(Integer id, Integer userId, String email, String ipAddress, 
                       Timestamp attemptedAt, String failureReason) {
         this.id = id;
         this.userId = userId;
         this.ipAddress = ipAddress;
+        this.email = email;
         this.attemptedAt = attemptedAt;
         this.failureReason = failureReason;
     }
@@ -77,6 +81,14 @@ public class FailedLogin {
 
     public void setIpAddress(String ipAddress) {
         this.ipAddress = ipAddress;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public Timestamp getAttemptedAt() {
@@ -113,13 +125,14 @@ public class FailedLogin {
         FailedLogin that = (FailedLogin) o;
         return Objects.equals(id, that.id) &&
                Objects.equals(userId, that.userId) &&
+               Objects.equals(email, that.email) &&
                Objects.equals(ipAddress, that.ipAddress) &&
                Objects.equals(attemptedAt, that.attemptedAt);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, userId, ipAddress, attemptedAt);
+        return Objects.hash(id, userId, email, ipAddress, attemptedAt);
     }
 
     @Override
@@ -127,6 +140,7 @@ public class FailedLogin {
         return "FailedLogin{" +
                "id=" + id +
                ", userId=" + userId +
+               ", email='" + email + '\'' +
                ", ipAddress='" + ipAddress + '\'' +
                ", attemptedAt=" + attemptedAt +
                ", failureReason='" + failureReason + '\'' +

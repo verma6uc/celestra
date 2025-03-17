@@ -5,12 +5,15 @@ import com.celestra.dao.impl.FailedLoginDaoImpl;
 import com.celestra.model.FailedLogin;
 import com.celestra.seeding.util.FakerUtil;
 import com.celestra.seeding.util.TimestampUtil;
+import com.celestra.dao.UserDao;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -25,8 +28,10 @@ public class FailedLoginSeeder {
     
     private final Connection connection;
     private final FailedLoginDao failedLoginDao;
+    private final UserDao userDao;
     private final int numFailedLogins;
     private final List<Integer> userIds;
+    private final Map<Integer, String> userEmails;
     
     /**
      * Constructor for FailedLoginSeeder.
@@ -35,9 +40,11 @@ public class FailedLoginSeeder {
      * @param numFailedLogins Number of failed login records to seed
      * @param userIds List of user IDs to associate failed logins with
      */
-    public FailedLoginSeeder(Connection connection, int numFailedLogins, List<Integer> userIds) {
+    public FailedLoginSeeder(Connection connection, int numFailedLogins, List<Integer> userIds, UserDao userDao, Map<Integer, String> userEmails) {
         this.connection = connection;
         this.failedLoginDao = new FailedLoginDaoImpl();
+        this.userDao = userDao;
+        this.userEmails = userEmails;
         this.numFailedLogins = numFailedLogins;
         this.userIds = userIds;
     }
@@ -73,6 +80,7 @@ public class FailedLoginSeeder {
             for (int i = 0; i < numValidUsernames; i++) {
                 // Select a random user
                 Integer userId = userIds.get(FakerUtil.generateRandomInt(0, userIds.size() - 1));
+                String email = userEmails.getOrDefault(userId, "user" + userId + "@example.com");
                 
                 // Generate IP address and user agent
                 String ipAddress = FakerUtil.generateIpAddress();
@@ -87,6 +95,7 @@ public class FailedLoginSeeder {
                 // Create the failed login object
                 FailedLogin failedLogin = new FailedLogin();
                 failedLogin.setUserId(userId);
+                failedLogin.setEmail(email);
                 failedLogin.setIpAddress(ipAddress);
                 failedLogin.setAttemptedAt(timestamp);
                 failedLogin.setFailureReason("Invalid password. Consecutive failures: " + consecutiveFailures + 
@@ -104,6 +113,9 @@ public class FailedLoginSeeder {
                 // Generate IP address and user agent
                 String ipAddress = FakerUtil.generateIpAddress();
                 String userAgent = FakerUtil.generateUserAgent();
+
+                // Generate a random email for the invalid user
+                String randomEmail = FakerUtil.generateEmail();
                 
                 // Generate a random number of consecutive failures (1-3)
                 int consecutiveFailures = FakerUtil.generateRandomInt(1, 3);
@@ -114,9 +126,10 @@ public class FailedLoginSeeder {
                 // Create the failed login object
                 FailedLogin failedLogin = new FailedLogin();
                 failedLogin.setUserId(null); // No user ID for invalid usernames
+                failedLogin.setEmail(randomEmail);
                 failedLogin.setIpAddress(ipAddress);
                 failedLogin.setAttemptedAt(timestamp);
-                failedLogin.setFailureReason("User not found: " + FakerUtil.generateEmail() + 
+                failedLogin.setFailureReason("User not found: " + randomEmail + 
                         ". Consecutive failures: " + consecutiveFailures + ". User agent: " + userAgent);
                 
                 // Save the failed login

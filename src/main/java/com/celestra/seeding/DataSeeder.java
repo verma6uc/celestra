@@ -3,6 +3,7 @@ package com.celestra.seeding;
 import com.celestra.db.DatabaseUtil;
 import com.celestra.dao.AgentDao;
 import com.celestra.dao.KnowledgeBaseDao;
+import com.celestra.dao.UserDao;
 import com.celestra.dao.impl.AgentDaoImpl;
 import com.celestra.dao.impl.KnowledgeBaseDaoImpl;
 import com.celestra.seeding.seeders.CompanySeeder;
@@ -20,6 +21,7 @@ import com.celestra.seeding.seeders.PasswordHistorySeeder;
 import com.celestra.seeding.seeders.UserLockoutSeeder;
 import com.celestra.seeding.seeders.UserSessionSeeder;
 import com.celestra.seeding.seeders.UserSeeder;
+import com.celestra.dao.impl.UserDaoImpl;
 import com.celestra.seeding.util.FakerUtil;
 import com.celestra.seeding.util.EnumUtil;
 import com.celestra.seeding.util.PasswordUtil;
@@ -265,6 +267,27 @@ public class DataSeeder {
     }
     
     /**
+     * Get the email for each user.
+     * 
+     * @param connection Database connection
+     * @return Map of user IDs to their email addresses
+     * @throws SQLException If a database error occurs
+     */
+    private static HashMap<Integer, String> getUserEmails(Connection connection) throws SQLException {
+        HashMap<Integer, String> userEmails = new HashMap<>();
+        
+        String sql = "SELECT id, email FROM users";
+        try (PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
+            
+            while (resultSet.next()) {
+                userEmails.put(resultSet.getInt("id"), resultSet.getString("email"));
+            }
+        }
+        return userEmails;
+    }
+    
+    /**
      * Seed the knowledge_bases table.
      * 
      * @param connection Database connection
@@ -342,7 +365,10 @@ public class DataSeeder {
     private static void seedFailedLogins(Connection connection) throws SQLException {
         LOGGER.info("Seeding failed_logins table...");
         
-        FailedLoginSeeder failedLoginSeeder = new FailedLoginSeeder(connection, NUM_FAILED_LOGINS, userIds);
+        // Get user emails for failed login tracking
+        HashMap<Integer, String> userEmails = getUserEmails(connection);
+        UserDao userDao = new UserDaoImpl();
+        FailedLoginSeeder failedLoginSeeder = new FailedLoginSeeder(connection, NUM_FAILED_LOGINS, userIds, userDao, userEmails);
         failedLoginIds = failedLoginSeeder.seed();
         
         LOGGER.info("Seeded " + failedLoginIds.size() + " failed logins.");

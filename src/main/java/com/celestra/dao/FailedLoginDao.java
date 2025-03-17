@@ -21,6 +21,16 @@ public interface FailedLoginDao extends BaseDao<FailedLogin, Integer> {
     List<FailedLogin> findByUsername(String username) throws SQLException;
     
     /**
+     * Find failed login attempts by email.
+     * This is useful when a user ID is not available.
+     * 
+     * @param email The email address to search for
+     * @return A list of failed login attempts for the specified email
+     * @throws SQLException if a database access error occurs
+     */
+    List<FailedLogin> findByEmail(String email) throws SQLException;
+    
+    /**
      * Find failed login attempts by IP address.
      * 
      * @param ipAddress The IP address to search for
@@ -50,6 +60,17 @@ public interface FailedLoginDao extends BaseDao<FailedLogin, Integer> {
     List<FailedLogin> findRecentByUsername(String username, int minutes) throws SQLException;
     
     /**
+     * Find recent failed login attempts by email within a specified time window.
+     * This is useful when a user ID is not available.
+     * 
+     * @param email The email address to search for
+     * @param minutes The time window in minutes
+     * @return A list of recent failed login attempts for the specified email
+     * @throws SQLException if a database access error occurs
+     */
+    List<FailedLogin> findRecentByEmail(String email, int minutes) throws SQLException;
+    
+    /**
      * Count recent failed login attempts by username within a specified time window.
      * 
      * @param username The username to search for
@@ -58,6 +79,17 @@ public interface FailedLoginDao extends BaseDao<FailedLogin, Integer> {
      * @throws SQLException if a database access error occurs
      */
     int countRecentByUsername(String username, int minutes) throws SQLException;
+    
+    /**
+     * Count recent failed login attempts by email within a specified time window.
+     * This is useful when a user ID is not available.
+     * 
+     * @param email The email address to search for
+     * @param minutes The time window in minutes
+     * @return The number of recent failed login attempts for the specified email
+     * @throws SQLException if a database access error occurs
+     */
+    int countRecentByEmail(String email, int minutes) throws SQLException;
     
     /**
      * Count recent failed login attempts by IP address within a specified time window.
