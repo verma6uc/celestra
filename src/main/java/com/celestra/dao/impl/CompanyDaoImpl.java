@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.Optional;
 
 import com.celestra.dao.AbstractBaseDao;
 import com.celestra.dao.CompanyDao;
@@ -58,6 +59,9 @@ public class CompanyDaoImpl extends AbstractBaseDao<Company, Integer> implements
     
     private static final String FIND_BY_NAME_CONTAINING_SQL = 
             "SELECT * FROM " + TABLE_NAME + " WHERE " + NAME_COLUMN + " LIKE ?";
+    
+    private static final String FIND_BY_NAME_SQL = 
+            "SELECT * FROM " + TABLE_NAME + " WHERE " + NAME_COLUMN + " = ?";
     
     private static final String FIND_BY_VERTICAL_SQL = 
             "SELECT * FROM " + TABLE_NAME + " WHERE " + VERTICAL_COLUMN + " = ?::company_vertical";
@@ -190,6 +194,17 @@ public class CompanyDaoImpl extends AbstractBaseDao<Company, Integer> implements
         return executeQuery(FIND_BY_NAME_CONTAINING_SQL, ps -> 
             ps.setString(1, "%" + name + "%")
         );
+    }
+    
+    @Override
+    public Optional<Company> findByName(String name) throws SQLException {
+        List<Company> companies = executeQuery(FIND_BY_NAME_SQL, ps -> 
+            ps.setString(1, name)
+        );
+        
+        return companies.isEmpty() 
+                ? Optional.empty() 
+                : Optional.of(companies.get(0));
     }
     
     @Override

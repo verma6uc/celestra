@@ -74,6 +74,11 @@ public class AgentDaoImpl extends AbstractBaseDao<Agent, Integer> implements Age
             AGENT_PROTOCOL_COLUMN + " = ?, " + 
             UPDATED_AT_COLUMN + " = ? " + 
             "WHERE " + ID_COLUMN + " = ?";
+            
+    private static final String FIND_BY_COMPANY_NAME_SQL = 
+            "SELECT a.* FROM " + TABLE_NAME + " a " +
+            "JOIN companies c ON a." + COMPANY_ID_COLUMN + " = c.id " +
+            "WHERE c.name = ?";
     
     @Override
     protected String getTableName() {
@@ -223,5 +228,12 @@ public class AgentDaoImpl extends AbstractBaseDao<Agent, Integer> implements Age
             ps.setTimestamp(2, new Timestamp(System.currentTimeMillis()));
             ps.setInt(3, id);
         }) > 0;
+    }
+    
+    @Override
+    public List<Agent> findByCompanyName(String companyName) throws SQLException {
+        return executeQuery(FIND_BY_COMPANY_NAME_SQL, ps -> 
+            ps.setString(1, companyName)
+        );
     }
 }

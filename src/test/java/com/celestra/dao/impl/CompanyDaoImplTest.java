@@ -207,6 +207,25 @@ public class CompanyDaoImplTest extends BaseDaoTest {
     }
     
     /**
+     * Test the findByName method.
+     */
+    @Test
+    public void testFindByName() throws SQLException {
+        // Find company by exact name
+        Optional<Company> company = companyDao.findByName("Test Company 1");
+        
+        // Verify the company was found
+        assertTrue("Company should be found by exact name", company.isPresent());
+        assertEquals("Found company name should match", "Test Company 1", company.get().getName());
+        
+        // Test with a non-existent company name
+        Optional<Company> nonExistentCompany = companyDao.findByName("Non-Existent Company");
+        
+        // Verify the company was not found
+        assertFalse("Non-existent company should not be found", nonExistentCompany.isPresent());
+    }
+    
+    /**
      * Test the findByVertical method.
      */
     @Test

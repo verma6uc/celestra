@@ -2,6 +2,7 @@ package com.celestra.dao;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
 
 import com.celestra.enums.CompanyStatus;
 import com.celestra.model.Company;
@@ -28,6 +29,15 @@ public interface CompanyDao extends BaseDao<Company, Integer> {
      * @throws SQLException if a database access error occurs
      */
     List<Company> findByNameContaining(String name) throws SQLException;
+    
+    /**
+     * Find a company by exact name.
+     * 
+     * @param name The exact company name to search for
+     * @return An Optional containing the company if found, or empty if not found
+     * @throws SQLException if a database access error occurs
+     */
+    Optional<Company> findByName(String name) throws SQLException;
     
     /**
      * Find companies by vertical.

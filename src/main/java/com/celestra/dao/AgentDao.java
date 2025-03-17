@@ -67,4 +67,13 @@ public interface AgentDao extends BaseDao<Agent, Integer> {
      * @throws SQLException if a database access error occurs
      */
     boolean updateAgentProtocol(Integer id, String agentProtocol) throws SQLException;
+    
+    /**
+     * Find agents by company name.
+     * 
+     * @param companyName The name of the company
+     * @return A list of agents belonging to the company with the specified name
+     * @throws SQLException if a database access error occurs
+     */
+    List<Agent> findByCompanyName(String companyName) throws SQLException;
 }

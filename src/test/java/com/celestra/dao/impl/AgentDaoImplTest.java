@@ -10,9 +10,11 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.celestra.dao.AgentDao;
+import com.celestra.dao.CompanyDao;
 import com.celestra.dao.BaseDaoTest;
 import com.celestra.enums.AgentStatus;
 import com.celestra.model.Agent;
+import com.celestra.model.Company;
 
 /**
  * Test class for AgentDaoImpl.
@@ -20,12 +22,14 @@ import com.celestra.model.Agent;
 public class AgentDaoImplTest extends BaseDaoTest {
     
     private AgentDao agentDao;
+    private CompanyDao companyDao;
     
     /**
      * Initialize the DAO before each test.
      */
     @Before
     public void initialize() {
+        companyDao = new CompanyDaoImpl();
         agentDao = new AgentDaoImpl();
     }
     
@@ -47,14 +51,14 @@ public class AgentDaoImplTest extends BaseDaoTest {
                    "VALUES ('Test Company 2', 'Test Company Description 2', 'MEDIUM'::company_size, 'PHARMACEUTICAL'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW()) RETURNING id");
         
         // Then insert test agents
-        executeSQL("INSERT INTO agents (company_id, name, description, agent_protocol, status, created_at, updated_at) " +
-                   "VALUES (1, 'Test Agent 1', 'Test Description 1', '{\"type\":\"basic\"}', 'ACTIVE'::agent_status, NOW(), NOW())");
+        executeSQL("INSERT INTO agents (company_id, name, description, agent_protocol, status, created_at, updated_at) VALUES " +
+                   "((SELECT id FROM companies WHERE name = 'Test Company 1'), 'Test Agent 1', 'Test Description 1', '{\"type\":\"basic\"}', 'ACTIVE'::agent_status, NOW(), NOW())");
         
-        executeSQL("INSERT INTO agents (company_id, name, description, agent_protocol, status, created_at, updated_at) " +
-                   "VALUES (1, 'Test Agent 2', 'Test Description 2', '{\"type\":\"advanced\"}', 'DISABLED'::agent_status, NOW(), NOW())");
+        executeSQL("INSERT INTO agents (company_id, name, description, agent_protocol, status, created_at, updated_at) VALUES " +
+                   "((SELECT id FROM companies WHERE name = 'Test Company 1'), 'Test Agent 2', 'Test Description 2', '{\"type\":\"advanced\"}', 'DISABLED'::agent_status, NOW(), NOW())");
         
-        executeSQL("INSERT INTO agents (company_id, name, description, agent_protocol, status, created_at, updated_at) " +
-                   "VALUES (2, 'Another Agent', 'Another Description', '{\"type\":\"custom\"}', 'ACTIVE'::agent_status, NOW(), NOW())");
+        executeSQL("INSERT INTO agents (company_id, name, description, agent_protocol, status, created_at, updated_at) VALUES " +
+                   "((SELECT id FROM companies WHERE name = 'Test Company 2'), 'Another Agent', 'Another Description', '{\"type\":\"custom\"}', 'ACTIVE'::agent_status, NOW(), NOW())");
     }
     
     @Override
@@ -73,7 +77,8 @@ public class AgentDaoImplTest extends BaseDaoTest {
     public void testCreate() throws SQLException {
         // Create a new agent
         Agent agent = new Agent();
-        agent.setCompanyId(1);
+        Optional<Company> company = companyDao.findByName("Test Company 1");
+        agent.setCompanyId(company.get().getId());
         agent.setName("Test Agent Create");
         agent.setDescription("Test Description Create");
         agent.setAgentProtocol("{\"type\":\"test\"}");
@@ -133,7 +138,8 @@ public class AgentDaoImplTest extends BaseDaoTest {
     public void testUpdate() throws SQLException {
         // Create a new agent
         Agent agent = new Agent();
-        agent.setCompanyId(1);
+        Optional<Company> company = companyDao.findByName("Test Company 1");
+        agent.setCompanyId(company.get().getId());
         agent.setName("Test Agent Update");
         agent.setDescription("Test Description Update");
         agent.setAgentProtocol("{\"type\":\"test\"}");
@@ -163,7 +169,8 @@ public class AgentDaoImplTest extends BaseDaoTest {
     public void testDelete() throws SQLException {
         // Create a new agent
         Agent agent = new Agent();
-        agent.setCompanyId(1);
+        Optional<Company> company = companyDao.findByName("Test Company 1");
+        agent.setCompanyId(company.get().getId());
         agent.setName("Test Agent Delete");
         agent.setDescription("Test Description Delete");
         agent.setAgentProtocol("{\"type\":\"test\"}");
@@ -187,14 +194,15 @@ public class AgentDaoImplTest extends BaseDaoTest {
     @Test
     public void testFindByCompanyId() throws SQLException {
         // Find agents by company ID
-        List<Agent> agents = agentDao.findByCompanyId(1);
+        Optional<Company> company = companyDao.findByName("Test Company 1");
+        List<Agent> agents = agentDao.findByCompanyId(company.get().getId());
         
         // Verify there are agents
-        assertFalse("There should be agents for company ID 1", agents.isEmpty());
+        assertFalse("There should be agents for Test Company 1", agents.isEmpty());
         
         // Verify all agents have the correct company ID
         for (Agent agent : agents) {
-            assertEquals("Agent company ID should be 1", Integer.valueOf(1), agent.getCompanyId());
+            assertEquals("Agent company ID should match Test Company 1", company.get().getId(), agent.getCompanyId());
         }
     }
     
@@ -221,14 +229,15 @@ public class AgentDaoImplTest extends BaseDaoTest {
     @Test
     public void testFindByCompanyIdAndStatus() throws SQLException {
         // Find agents by company ID and status
-        List<Agent> agents = agentDao.findByCompanyIdAndStatus(1, AgentStatus.ACTIVE);
+        Optional<Company> company = companyDao.findByName("Test Company 1");
+        List<Agent> agents = agentDao.findByCompanyIdAndStatus(company.get().getId(), AgentStatus.ACTIVE);
         
         // Verify there are agents
-        assertFalse("There should be active agents for company ID 1", agents.isEmpty());
+        assertFalse("There should be active agents for Test Company 1", agents.isEmpty());
         
         // Verify all agents have the correct company ID and status
         for (Agent agent : agents) {
-            assertEquals("Agent company ID should be 1", Integer.valueOf(1), agent.getCompanyId());
+            assertEquals("Agent company ID should match Test Company 1", company.get().getId(), agent.getCompanyId());
             assertEquals("Agent status should be ACTIVE", AgentStatus.ACTIVE, agent.getStatus());
         }
     }
@@ -257,7 +266,8 @@ public class AgentDaoImplTest extends BaseDaoTest {
     public void testUpdateStatus() throws SQLException {
         // Create a new agent
         Agent agent = new Agent();
-        agent.setCompanyId(1);
+        Optional<Company> company = companyDao.findByName("Test Company 1");
+        agent.setCompanyId(company.get().getId());
         agent.setName("Test Agent Status");
         agent.setDescription("Test Description Status");
         agent.setAgentProtocol("{\"type\":\"test\"}");
@@ -287,7 +297,8 @@ public class AgentDaoImplTest extends BaseDaoTest {
     public void testUpdateAgentProtocol() throws SQLException {
         // Create a new agent
         Agent agent = new Agent();
-        agent.setCompanyId(1);
+        Optional<Company> company = companyDao.findByName("Test Company 1");
+        agent.setCompanyId(company.get().getId());
         agent.setName("Test Agent Protocol");
         agent.setDescription("Test Description Protocol");
         agent.setAgentProtocol("{\"type\":\"old\"}");
@@ -309,5 +320,23 @@ public class AgentDaoImplTest extends BaseDaoTest {
         // Clean up
         boolean deleted = agentDao.delete(createdAgent.getId());
         assertTrue("Agent should be deleted successfully", deleted);
+    }
+    
+    /**
+     * Test the findByCompanyName method.
+     */
+    @Test
+    public void testFindByCompanyName() throws SQLException {
+        // Find agents by company name
+        Optional<Company> company = companyDao.findByName("Test Company 1");
+        List<Agent> agents = agentDao.findByCompanyName("Test Company 1");
+        
+        // Verify there are agents
+        assertFalse("There should be agents for Test Company 1", agents.isEmpty());
+        
+        // Verify all agents have the correct company ID
+        for (Agent agent : agents) {
+            assertEquals("Agent company ID should match Test Company 1", company.get().getId(), agent.getCompanyId());
+        }
     }
 }
