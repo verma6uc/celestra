@@ -6,6 +6,8 @@ import com.celestra.seeding.seeders.KnowledgeTypeSeeder;
 import com.celestra.seeding.seeders.AgentSeeder;
 import com.celestra.seeding.seeders.KnowledgeBaseSeeder;
 import com.celestra.seeding.seeders.AgentKnowledgeBaseSeeder;
+import com.celestra.seeding.seeders.AuditLogSeeder;
+import com.celestra.seeding.seeders.FailedLoginSeeder;
 import com.celestra.seeding.seeders.KnowledgeSourceSeeder;
 import com.celestra.seeding.seeders.UserSeeder;
 import com.celestra.seeding.util.FakerUtil;
@@ -55,6 +57,8 @@ public class DataSeeder {
     private static List<Integer> agentIds;
     private static List<Integer> knowledgeBaseIds;
     private static List<Integer> agentKnowledgeBaseIds;
+    private static List<Integer> auditLogIds;
+    private static List<Integer> failedLoginIds;
     private static List<Integer> knowledgeSourceIds;
     /**
      * Main method to run the data seeding process.
@@ -303,8 +307,11 @@ public class DataSeeder {
      */
     private static void seedAuditLogs(Connection connection) throws SQLException {
         LOGGER.info("Seeding audit_logs table...");
-        // TODO: Implement audit log seeding
-        LOGGER.info("Seeded " + NUM_AUDIT_LOGS + " audit logs.");
+        
+        AuditLogSeeder auditLogSeeder = new AuditLogSeeder(connection, NUM_AUDIT_LOGS, userIds, companyIds);
+        auditLogIds = auditLogSeeder.seed();
+        
+        LOGGER.info("Seeded " + auditLogIds.size() + " audit logs.");
     }
     
     /**
@@ -315,8 +322,11 @@ public class DataSeeder {
      */
     private static void seedFailedLogins(Connection connection) throws SQLException {
         LOGGER.info("Seeding failed_logins table...");
-        // TODO: Implement failed login seeding
-        LOGGER.info("Seeded " + NUM_FAILED_LOGINS + " failed logins.");
+        
+        FailedLoginSeeder failedLoginSeeder = new FailedLoginSeeder(connection, NUM_FAILED_LOGINS, userIds);
+        failedLoginIds = failedLoginSeeder.seed();
+        
+        LOGGER.info("Seeded " + failedLoginIds.size() + " failed logins.");
     }
     
     /**
