@@ -8,7 +8,9 @@ import com.celestra.seeding.seeders.KnowledgeBaseSeeder;
 import com.celestra.seeding.seeders.AgentKnowledgeBaseSeeder;
 import com.celestra.seeding.seeders.AuditLogSeeder;
 import com.celestra.seeding.seeders.FailedLoginSeeder;
+import com.celestra.seeding.seeders.InvitationSeeder;
 import com.celestra.seeding.seeders.KnowledgeSourceSeeder;
+import com.celestra.seeding.seeders.NotificationSeeder;
 import com.celestra.seeding.seeders.UserLockoutSeeder;
 import com.celestra.seeding.seeders.UserSessionSeeder;
 import com.celestra.seeding.seeders.UserSeeder;
@@ -63,6 +65,8 @@ public class DataSeeder {
     private static List<Integer> failedLoginIds;
     private static List<Integer> userSessionIds;
     private static List<Integer> userLockoutIds;
+    private static List<Integer> invitationIds;
+    private static List<Integer> notificationIds;
     private static List<Integer> knowledgeSourceIds;
     /**
      * Main method to run the data seeding process.
@@ -341,8 +345,11 @@ public class DataSeeder {
      */
     private static void seedInvitations(Connection connection) throws SQLException {
         LOGGER.info("Seeding invitations table...");
-        // TODO: Implement invitation seeding
-        LOGGER.info("Seeded " + NUM_INVITATIONS + " invitations.");
+        
+        InvitationSeeder invitationSeeder = new InvitationSeeder(connection, NUM_INVITATIONS, userIds);
+        invitationIds = invitationSeeder.seed();
+        
+        LOGGER.info("Seeded " + invitationIds.size() + " invitations.");
     }
     
     /**
@@ -353,8 +360,11 @@ public class DataSeeder {
      */
     private static void seedNotifications(Connection connection) throws SQLException {
         LOGGER.info("Seeding notifications table...");
-        // TODO: Implement notification seeding
-        LOGGER.info("Seeded " + NUM_NOTIFICATIONS + " notifications.");
+        
+        NotificationSeeder notificationSeeder = new NotificationSeeder(connection, NUM_NOTIFICATIONS, companyIds, userIds);
+        notificationIds = notificationSeeder.seed();
+        
+        LOGGER.info("Seeded " + notificationIds.size() + " notifications.");
     }
     
     /**
