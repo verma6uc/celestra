@@ -6,8 +6,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -110,16 +108,8 @@ public class UserSessionDaoImpl extends AbstractBaseDao<UserSession, Integer> im
         userSession.setSessionToken(rs.getString(SESSION_TOKEN_COLUMN));
         userSession.setIpAddress(rs.getString(IP_ADDRESS_COLUMN));
         userSession.setUserAgent(rs.getString(USER_AGENT_COLUMN));
-        
-        Timestamp createdAtTimestamp = rs.getTimestamp(CREATED_AT_COLUMN);
-        if (createdAtTimestamp != null) {
-            userSession.setCreatedAt(createdAtTimestamp.toInstant().atOffset(OffsetDateTime.now().getOffset()));
-        }
-        
-        Timestamp expiresAtTimestamp = rs.getTimestamp(EXPIRES_AT_COLUMN);
-        if (expiresAtTimestamp != null) {
-            userSession.setExpiresAt(expiresAtTimestamp.toInstant().atOffset(OffsetDateTime.now().getOffset()));
-        }
+        userSession.setCreatedAt(rs.getTimestamp(CREATED_AT_COLUMN));
+        userSession.setExpiresAt(rs.getTimestamp(EXPIRES_AT_COLUMN));
         
         return userSession;
     }
@@ -132,13 +122,13 @@ public class UserSessionDaoImpl extends AbstractBaseDao<UserSession, Integer> im
         ps.setString(4, userSession.getUserAgent());
         
         if (userSession.getCreatedAt() != null) {
-            ps.setTimestamp(5, Timestamp.from(userSession.getCreatedAt().toInstant()));
+            ps.setTimestamp(5, userSession.getCreatedAt());
         } else {
             ps.setTimestamp(5, new Timestamp(System.currentTimeMillis()));
         }
         
         if (userSession.getExpiresAt() != null) {
-            ps.setTimestamp(6, Timestamp.from(userSession.getExpiresAt().toInstant()));
+            ps.setTimestamp(6, userSession.getExpiresAt());
         } else {
             // Default expiration: 24 hours from now
             ps.setTimestamp(6, new Timestamp(System.currentTimeMillis() + (24 * 60 * 60 * 1000L)));
@@ -153,13 +143,13 @@ public class UserSessionDaoImpl extends AbstractBaseDao<UserSession, Integer> im
         ps.setString(4, userSession.getUserAgent());
         
         if (userSession.getCreatedAt() != null) {
-            ps.setTimestamp(5, Timestamp.from(userSession.getCreatedAt().toInstant()));
+            ps.setTimestamp(5, userSession.getCreatedAt());
         } else {
             ps.setTimestamp(5, new Timestamp(System.currentTimeMillis()));
         }
         
         if (userSession.getExpiresAt() != null) {
-            ps.setTimestamp(6, Timestamp.from(userSession.getExpiresAt().toInstant()));
+            ps.setTimestamp(6, userSession.getExpiresAt());
         } else {
             // Default expiration: 24 hours from now
             ps.setTimestamp(6, new Timestamp(System.currentTimeMillis() + (24 * 60 * 60 * 1000L)));
@@ -262,11 +252,11 @@ public class UserSessionDaoImpl extends AbstractBaseDao<UserSession, Integer> im
     }
     
     @Override
-    public boolean updateExpiresAt(Integer id, OffsetDateTime expiresAt) throws SQLException {
+    public boolean updateExpiresAt(Integer id, Timestamp expiresAt) throws SQLException {
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement ps = conn.prepareStatement(UPDATE_EXPIRES_AT_SQL)) {
             
-            ps.setTimestamp(1, Timestamp.from(expiresAt.toInstant()));
+            ps.setTimestamp(1, expiresAt);
             ps.setInt(2, id);
             
             int affectedRows = ps.executeUpdate();

@@ -1,7 +1,7 @@
 package com.celestra.dao;
 
 import java.sql.SQLException;
-import java.time.OffsetDateTime;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
 
@@ -72,7 +72,7 @@ public interface UserSessionDao extends BaseDao<UserSession, Integer> {
      * @return true if the update was successful, false otherwise
      * @throws SQLException if a database access error occurs
      */
-    boolean updateExpiresAt(Integer id, OffsetDateTime expiresAt) throws SQLException;
+    boolean updateExpiresAt(Integer id, Timestamp expiresAt) throws SQLException;
     
     /**
      * Delete all expired sessions.

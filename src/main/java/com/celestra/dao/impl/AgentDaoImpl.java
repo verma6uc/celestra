@@ -39,7 +39,7 @@ public class AgentDaoImpl extends AbstractBaseDao<Agent, Integer> implements Age
             STATUS_COLUMN + ", " + 
             CREATED_AT_COLUMN + ", " + 
             UPDATED_AT_COLUMN + 
-            ") VALUES (?, ?, ?, ?, ?, ?, ?)";
+            ") VALUES (?, ?, ?, ?, ?::agent_status, ?, ?)";
     
     private static final String UPDATE_SQL = 
             "UPDATE " + TABLE_NAME + " SET " + 
@@ -47,7 +47,7 @@ public class AgentDaoImpl extends AbstractBaseDao<Agent, Integer> implements Age
             NAME_COLUMN + " = ?, " + 
             DESCRIPTION_COLUMN + " = ?, " + 
             AGENT_PROTOCOL_COLUMN + " = ?, " + 
-            STATUS_COLUMN + " = ?, " + 
+            STATUS_COLUMN + " = ?::agent_status, " + 
             UPDATED_AT_COLUMN + " = ? " + 
             "WHERE " + ID_COLUMN + " = ?";
     
@@ -55,17 +55,17 @@ public class AgentDaoImpl extends AbstractBaseDao<Agent, Integer> implements Age
             "SELECT * FROM " + TABLE_NAME + " WHERE " + COMPANY_ID_COLUMN + " = ?";
     
     private static final String FIND_BY_STATUS_SQL = 
-            "SELECT * FROM " + TABLE_NAME + " WHERE " + STATUS_COLUMN + " = ?";
+            "SELECT * FROM " + TABLE_NAME + " WHERE " + STATUS_COLUMN + " = ?::agent_status";
     
     private static final String FIND_BY_COMPANY_ID_AND_STATUS_SQL = 
-            "SELECT * FROM " + TABLE_NAME + " WHERE " + COMPANY_ID_COLUMN + " = ? AND " + STATUS_COLUMN + " = ?";
+            "SELECT * FROM " + TABLE_NAME + " WHERE " + COMPANY_ID_COLUMN + " = ? AND " + STATUS_COLUMN + " = ?::agent_status";
     
     private static final String FIND_BY_NAME_CONTAINING_SQL = 
             "SELECT * FROM " + TABLE_NAME + " WHERE " + NAME_COLUMN + " LIKE ?";
     
     private static final String UPDATE_STATUS_SQL = 
             "UPDATE " + TABLE_NAME + " SET " + 
-            STATUS_COLUMN + " = ?, " + 
+            STATUS_COLUMN + " = ?::agent_status, " + 
             UPDATED_AT_COLUMN + " = ? " + 
             "WHERE " + ID_COLUMN + " = ?";
     

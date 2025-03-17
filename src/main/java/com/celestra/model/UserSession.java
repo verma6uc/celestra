@@ -1,6 +1,6 @@
 package com.celestra.model;
 
-import java.time.OffsetDateTime;
+import java.sql.Timestamp;
 import java.util.Objects;
 
 /**
@@ -13,8 +13,8 @@ public class UserSession {
     private String sessionToken;
     private String ipAddress;
     private String userAgent;
-    private OffsetDateTime createdAt;
-    private OffsetDateTime expiresAt;
+    private Timestamp createdAt;
+    private Timestamp expiresAt;
     
     // Reference to the associated user (not stored in database)
     private User user;
@@ -33,7 +33,7 @@ public class UserSession {
      * @param sessionToken The secure cryptographic token for session validation
      * @param expiresAt The timestamp when session will automatically terminate
      */
-    public UserSession(Integer userId, String sessionToken, OffsetDateTime expiresAt) {
+    public UserSession(Integer userId, String sessionToken, Timestamp expiresAt) {
         this.userId = userId;
         this.sessionToken = sessionToken;
         this.expiresAt = expiresAt;
@@ -51,7 +51,7 @@ public class UserSession {
      * @param expiresAt The timestamp when session will automatically terminate
      */
     public UserSession(Integer id, Integer userId, String sessionToken, String ipAddress, 
-                      String userAgent, OffsetDateTime createdAt, OffsetDateTime expiresAt) {
+                      String userAgent, Timestamp createdAt, Timestamp expiresAt) {
         this.id = id;
         this.userId = userId;
         this.sessionToken = sessionToken;
@@ -103,19 +103,19 @@ public class UserSession {
         this.userAgent = userAgent;
     }
 
-    public OffsetDateTime getCreatedAt() {
+    public Timestamp getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(OffsetDateTime createdAt) {
+    public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }
 
-    public OffsetDateTime getExpiresAt() {
+    public Timestamp getExpiresAt() {
         return expiresAt;
     }
 
-    public void setExpiresAt(OffsetDateTime expiresAt) {
+    public void setExpiresAt(Timestamp expiresAt) {
         this.expiresAt = expiresAt;
     }
     
@@ -136,7 +136,7 @@ public class UserSession {
      * @return true if the session is expired, false otherwise
      */
     public boolean isExpired() {
-        return expiresAt.isBefore(OffsetDateTime.now());
+        return expiresAt.before(new Timestamp(System.currentTimeMillis()));
     }
     
     /**
@@ -154,11 +154,11 @@ public class UserSession {
      * @return The number of seconds until session expiration, or 0 if already expired
      */
     public long getSecondsUntilExpiration() {
-        OffsetDateTime now = OffsetDateTime.now();
-        if (expiresAt.isBefore(now)) {
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        if (expiresAt.before(now)) {
             return 0;
         }
-        return java.time.Duration.between(now, expiresAt).getSeconds();
+        return (expiresAt.getTime() - now.getTime()) / 1000;
     }
     
     @Override
