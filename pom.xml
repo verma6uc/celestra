@@ -17,6 +17,8 @@
     <postgresql.version>42.7.1</postgresql.version>
     <dbcp2.version>2.11.0</dbcp2.version>
     <commons-lang3.version>3.14.0</commons-lang3.version>
+    <javafaker.version>1.0.2</javafaker.version>
+    <jbcrypt.version>0.4</jbcrypt.version>
   </properties>
   
   <dependencies>
@@ -54,6 +56,20 @@
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-lang3</artifactId>
       <version>${commons-lang3.version}</version>
+    </dependency>
+    
+    <!-- Java Faker for generating test data -->
+    <dependency>
+      <groupId>com.github.javafaker</groupId>
+      <artifactId>javafaker</artifactId>
+      <version>${javafaker.version}</version>
+    </dependency>
+    
+    <!-- jBCrypt for password hashing -->
+    <dependency>
+      <groupId>org.mindrot</groupId>
+      <artifactId>jbcrypt</artifactId>
+      <version>${jbcrypt.version}</version>
     </dependency>
     
     <!-- JUnit for testing -->

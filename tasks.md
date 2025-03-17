@@ -32,7 +32,7 @@
 
 ## Implementation
 
-- [ ] **Set up seeding utilities**
+- [x] **Set up seeding utilities**
   - **Why**: Helper utilities will make the seeding process more consistent and efficient.
   - **What**: Implement utility methods that:
     - Leverage the existing database connection
