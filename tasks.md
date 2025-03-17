@@ -40,7 +40,7 @@
     - Configure and initialize the Faker library
     - Include error handling and logging for seeding operations
 
-- [ ] **Implement seeding classes for independent tables**
+- [x] **Implement seeding classes for independent tables**
   - **Why**: Tables without foreign key dependencies should be seeded first.
   - **What**: Create Java classes that:
     - Generate appropriate fake data using Faker

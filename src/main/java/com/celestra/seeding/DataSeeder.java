@@ -1,10 +1,13 @@
 package com.celestra.seeding;
 
 import com.celestra.db.DatabaseUtil;
+import com.celestra.seeding.seeders.CompanySeeder;
+import com.celestra.seeding.seeders.KnowledgeTypeSeeder;
 import com.celestra.seeding.util.FakerUtil;
 import com.celestra.seeding.util.EnumUtil;
 import com.celestra.seeding.util.PasswordUtil;
 import com.celestra.seeding.util.TimestampUtil;
+import java.util.List;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -37,6 +40,9 @@ public class DataSeeder {
     private static final int NUM_PASSWORD_HISTORY = 80;
     private static final int NUM_USER_LOCKOUTS = 15;
     
+    // Store generated IDs for relationships
+    private static List<Integer> companyIds;
+    private static List<Integer> knowledgeTypeIds;
     /**
      * Main method to run the data seeding process.
      * 
@@ -126,8 +132,11 @@ public class DataSeeder {
      */
     private static void seedCompanies(Connection connection) throws SQLException {
         LOGGER.info("Seeding companies table...");
-        // TODO: Implement company seeding
-        LOGGER.info("Seeded " + NUM_COMPANIES + " companies.");
+        
+        CompanySeeder companySeeder = new CompanySeeder(connection, NUM_COMPANIES);
+        companyIds = companySeeder.seed();
+        
+        LOGGER.info("Seeded " + companyIds.size() + " companies.");
     }
     
     /**
@@ -138,8 +147,11 @@ public class DataSeeder {
      */
     private static void seedKnowledgeTypes(Connection connection) throws SQLException {
         LOGGER.info("Seeding knowledge_types table...");
-        // TODO: Implement knowledge type seeding
-        LOGGER.info("Seeded " + NUM_KNOWLEDGE_TYPES + " knowledge types.");
+        
+        KnowledgeTypeSeeder knowledgeTypeSeeder = new KnowledgeTypeSeeder(connection, NUM_KNOWLEDGE_TYPES);
+        knowledgeTypeIds = knowledgeTypeSeeder.seed();
+        
+        LOGGER.info("Seeded " + knowledgeTypeIds.size() + " knowledge types.");
     }
     
     /**
