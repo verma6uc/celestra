@@ -1,5 +1,8 @@
 package com.celestra.seeding.seeders;
 
+import com.celestra.dao.KnowledgeTypeDao;
+import com.celestra.dao.impl.KnowledgeTypeDaoImpl;
+import com.celestra.model.KnowledgeType;
 import com.celestra.seeding.util.FakerUtil;
 import com.celestra.seeding.util.TimestampUtil;
 
@@ -20,10 +23,6 @@ public class KnowledgeTypeSeeder {
     
     private static final Logger LOGGER = Logger.getLogger(KnowledgeTypeSeeder.class.getName());
     
-    private static final String INSERT_KNOWLEDGE_TYPE_SQL = 
-            "INSERT INTO knowledge_types (name, description, created_at, updated_at) " +
-            "VALUES (?, ?, ?, ?)";
-    
     // Predefined knowledge type names and descriptions for realistic data
     private static final String[][] PREDEFINED_KNOWLEDGE_TYPES = {
         {"Document", "Knowledge extracted from documents such as PDFs, Word files, and text documents."},
@@ -41,6 +40,7 @@ public class KnowledgeTypeSeeder {
     };
     
     private final Connection connection;
+    private final KnowledgeTypeDao knowledgeTypeDao;
     private final int numKnowledgeTypes;
     
     /**
@@ -51,6 +51,7 @@ public class KnowledgeTypeSeeder {
      */
     public KnowledgeTypeSeeder(Connection connection, int numKnowledgeTypes) {
         this.connection = connection;
+        this.knowledgeTypeDao = new KnowledgeTypeDaoImpl();
         this.numKnowledgeTypes = Math.min(numKnowledgeTypes, PREDEFINED_KNOWLEDGE_TYPES.length);
     }
     
@@ -65,9 +66,7 @@ public class KnowledgeTypeSeeder {
         
         List<Integer> knowledgeTypeIds = new ArrayList<>();
         
-        try (PreparedStatement statement = connection.prepareStatement(
-                INSERT_KNOWLEDGE_TYPE_SQL, PreparedStatement.RETURN_GENERATED_KEYS)) {
-            
+        try {
             for (int i = 0; i < numKnowledgeTypes; i++) {
                 // Get predefined knowledge type data
                 String name = PREDEFINED_KNOWLEDGE_TYPES[i][0];
@@ -78,21 +77,18 @@ public class KnowledgeTypeSeeder {
                 Timestamp createdAt = timestamps[0];
                 Timestamp updatedAt = timestamps[1];
                 
-                // Set parameters
-                statement.setString(1, name);
-                statement.setString(2, description);
-                statement.setTimestamp(3, createdAt);
-                statement.setTimestamp(4, updatedAt);
+                // Create the knowledge type object
+                KnowledgeType knowledgeType = new KnowledgeType();
+                knowledgeType.setName(name);
+                knowledgeType.setDescription(description);
+                knowledgeType.setCreatedAt(createdAt);
+                knowledgeType.setUpdatedAt(updatedAt);
                 
-                // Execute the insert
-                statement.executeUpdate();
-                
-                // Get the generated ID
-                try (var generatedKeys = statement.getGeneratedKeys()) {
-                    if (generatedKeys.next()) {
-                        knowledgeTypeIds.add(generatedKeys.getInt(1));
+                // Save the knowledge type
+                KnowledgeType createdType = knowledgeTypeDao.create(knowledgeType);
+                if (createdType != null && createdType.getId() > 0) {
+                    knowledgeTypeIds.add(createdType.getId());
                     }
-                }
             }
             
             LOGGER.info("Successfully seeded " + knowledgeTypeIds.size() + " knowledge types.");

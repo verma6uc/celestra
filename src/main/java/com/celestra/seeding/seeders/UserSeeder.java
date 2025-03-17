@@ -1,5 +1,8 @@
 package com.celestra.seeding.seeders;
 
+import com.celestra.dao.UserDao;
+import com.celestra.dao.impl.UserDaoImpl;
+import com.celestra.model.User;
 import com.celestra.enums.UserRole;
 import com.celestra.enums.UserStatus;
 import com.celestra.seeding.util.EnumUtil;
@@ -24,10 +27,6 @@ public class UserSeeder {
     
     private static final Logger LOGGER = Logger.getLogger(UserSeeder.class.getName());
     
-    private static final String INSERT_USER_SQL = 
-            "INSERT INTO users (company_id, role, email, name, password_hash, status, created_at, updated_at) " +
-            "VALUES (?, ?::user_role, ?, ?, ?, ?::user_status, ?, ?)";
-    
     // User role distribution (SUPER_ADMIN, COMPANY_ADMIN, SPACE_ADMIN, REGULAR_USER)
     private static final double[] USER_ROLE_DISTRIBUTION = {0.02, 0.2, 0.08, 0.7};
     
@@ -35,6 +34,7 @@ public class UserSeeder {
     private static final double[] USER_STATUS_DISTRIBUTION = {0.85, 0.1, 0.03, 0.02};
     
     private final Connection connection;
+    private final UserDao userDao;
     private final int numUsers;
     private final List<Integer> companyIds;
     
@@ -47,6 +47,7 @@ public class UserSeeder {
      */
     public UserSeeder(Connection connection, int numUsers, List<Integer> companyIds) {
         this.connection = connection;
+        this.userDao = new UserDaoImpl();
         this.numUsers = numUsers;
         this.companyIds = companyIds;
     }
@@ -67,23 +68,21 @@ public class UserSeeder {
         
         List<Integer> userIds = new ArrayList<>();
         
-        try (PreparedStatement statement = connection.prepareStatement(
-                INSERT_USER_SQL, PreparedStatement.RETURN_GENERATED_KEYS)) {
-            
+        try {
             // Normalize the distribution weights
             double[] userRoleWeights = EnumUtil.createNormalizedWeights(UserRole.class, USER_ROLE_DISTRIBUTION);
             double[] userStatusWeights = EnumUtil.createNormalizedWeights(UserStatus.class, USER_STATUS_DISTRIBUTION);
             
             // Create a super admin user first
-            createSuperAdmin(statement, userIds);
+            createSuperAdmin(userIds);
             
             // Create company admin users for each company
-            createCompanyAdmins(statement, userIds);
+            createCompanyAdmins(userIds);
             
             // Create regular users
             int remainingUsers = numUsers - userIds.size();
-            createRegularUsers(statement, userIds, remainingUsers, userRoleWeights, userStatusWeights);
-            
+            createRegularUsers(userIds, remainingUsers, userRoleWeights, userStatusWeights);
+
             LOGGER.info("Successfully seeded " + userIds.size() + " users.");
             return userIds;
         } catch (SQLException e) {
@@ -95,11 +94,10 @@ public class UserSeeder {
     /**
      * Create a super admin user.
      * 
-     * @param statement Prepared statement for inserting users
      * @param userIds List to add the generated user ID to
      * @throws SQLException If a database error occurs
      */
-    private void createSuperAdmin(PreparedStatement statement, List<Integer> userIds) throws SQLException {
+    private void createSuperAdmin(List<Integer> userIds) throws SQLException {
         // Generate super admin data
         String name = "System Administrator";
         String email = "admin@celestra.com";
@@ -112,35 +110,31 @@ public class UserSeeder {
         Timestamp createdAt = timestamps[0];
         Timestamp updatedAt = timestamps[1];
         
-        // Set parameters
-        statement.setNull(1, java.sql.Types.INTEGER); // No company for super admin
-        statement.setString(2, role.name());
-        statement.setString(3, email);
-        statement.setString(4, name);
-        statement.setString(5, passwordHash);
-        statement.setString(6, status.name());
-        statement.setTimestamp(7, createdAt);
-        statement.setTimestamp(8, updatedAt);
+        // Create the user object
+        User user = new User();
+        user.setCompanyId(null); // No company for super admin
+        user.setRole(role);
+        user.setEmail(email);
+        user.setName(name);
+        user.setPasswordHash(passwordHash);
+        user.setStatus(status);
+        user.setCreatedAt(createdAt);
+        user.setUpdatedAt(updatedAt);
         
-        // Execute the insert
-        statement.executeUpdate();
-        
-        // Get the generated ID
-        try (var generatedKeys = statement.getGeneratedKeys()) {
-            if (generatedKeys.next()) {
-                userIds.add(generatedKeys.getInt(1));
+        // Save the user
+        User createdUser = userDao.create(user);
+        if (createdUser != null && createdUser.getId() > 0) {
+            userIds.add(createdUser.getId());
             }
-        }
     }
     
     /**
      * Create company admin users for each company.
      * 
-     * @param statement Prepared statement for inserting users
      * @param userIds List to add the generated user IDs to
      * @throws SQLException If a database error occurs
      */
-    private void createCompanyAdmins(PreparedStatement statement, List<Integer> userIds) throws SQLException {
+    private void createCompanyAdmins(List<Integer> userIds) throws SQLException {
         for (Integer companyId : companyIds) {
             // Generate company admin data
             String name = FakerUtil.generatePersonName();
@@ -154,40 +148,35 @@ public class UserSeeder {
             Timestamp createdAt = timestamps[0];
             Timestamp updatedAt = timestamps[1];
             
-            // Set parameters
-            statement.setInt(1, companyId);
-            statement.setString(2, role.name());
-            statement.setString(3, email);
-            statement.setString(4, name);
-            statement.setString(5, passwordHash);
-            statement.setString(6, status.name());
-            statement.setTimestamp(7, createdAt);
-            statement.setTimestamp(8, updatedAt);
+            // Create the user object
+            User user = new User();
+            user.setCompanyId(companyId);
+            user.setRole(role);
+            user.setEmail(email);
+            user.setName(name);
+            user.setPasswordHash(passwordHash);
+            user.setStatus(status);
+            user.setCreatedAt(createdAt);
+            user.setUpdatedAt(updatedAt);
             
-            // Execute the insert
-            statement.executeUpdate();
-            
-            // Get the generated ID
-            try (var generatedKeys = statement.getGeneratedKeys()) {
-                if (generatedKeys.next()) {
-                    userIds.add(generatedKeys.getInt(1));
+            // Save the user
+            User createdUser = userDao.create(user);
+            if (createdUser != null && createdUser.getId() > 0) {
+                userIds.add(createdUser.getId());
                 }
-            }
         }
     }
     
     /**
      * Create regular users.
      * 
-     * @param statement Prepared statement for inserting users
      * @param userIds List to add the generated user IDs to
      * @param numRegularUsers Number of regular users to create
      * @param userRoleWeights Weights for user role distribution
      * @param userStatusWeights Weights for user status distribution
      * @throws SQLException If a database error occurs
      */
-    private void createRegularUsers(PreparedStatement statement, List<Integer> userIds, 
-                                   int numRegularUsers, double[] userRoleWeights, 
+    private void createRegularUsers(List<Integer> userIds, int numRegularUsers, double[] userRoleWeights, 
                                    double[] userStatusWeights) throws SQLException {
         for (int i = 0; i < numRegularUsers; i++) {
             // Generate user data
@@ -211,25 +200,22 @@ public class UserSeeder {
             Timestamp createdAt = timestamps[0];
             Timestamp updatedAt = timestamps[1];
             
-            // Set parameters
-            statement.setInt(1, companyId);
-            statement.setString(2, role.name());
-            statement.setString(3, email);
-            statement.setString(4, name);
-            statement.setString(5, passwordHash);
-            statement.setString(6, status.name());
-            statement.setTimestamp(7, createdAt);
-            statement.setTimestamp(8, updatedAt);
+            // Create the user object
+            User user = new User();
+            user.setCompanyId(companyId);
+            user.setRole(role);
+            user.setEmail(email);
+            user.setName(name);
+            user.setPasswordHash(passwordHash);
+            user.setStatus(status);
+            user.setCreatedAt(createdAt);
+            user.setUpdatedAt(updatedAt);
             
-            // Execute the insert
-            statement.executeUpdate();
-            
-            // Get the generated ID
-            try (var generatedKeys = statement.getGeneratedKeys()) {
-                if (generatedKeys.next()) {
-                    userIds.add(generatedKeys.getInt(1));
+            // Save the user
+            User createdUser = userDao.create(user);
+            if (createdUser != null && createdUser.getId() > 0) {
+                userIds.add(createdUser.getId());
                 }
-            }
         }
     }
 }

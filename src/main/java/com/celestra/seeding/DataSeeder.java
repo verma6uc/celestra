@@ -5,6 +5,8 @@ import com.celestra.seeding.seeders.CompanySeeder;
 import com.celestra.seeding.seeders.KnowledgeTypeSeeder;
 import com.celestra.seeding.seeders.AgentSeeder;
 import com.celestra.seeding.seeders.KnowledgeBaseSeeder;
+import com.celestra.seeding.seeders.AgentKnowledgeBaseSeeder;
+import com.celestra.seeding.seeders.KnowledgeSourceSeeder;
 import com.celestra.seeding.seeders.UserSeeder;
 import com.celestra.seeding.util.FakerUtil;
 import com.celestra.seeding.util.EnumUtil;
@@ -52,6 +54,8 @@ public class DataSeeder {
     private static List<Integer> userIds;
     private static List<Integer> agentIds;
     private static List<Integer> knowledgeBaseIds;
+    private static List<Integer> agentKnowledgeBaseIds;
+    private static List<Integer> knowledgeSourceIds;
     /**
      * Main method to run the data seeding process.
      * 
@@ -220,6 +224,27 @@ public class DataSeeder {
     }
     
     /**
+     * Get the name for each knowledge type.
+     * 
+     * @param connection Database connection
+     * @return Map of knowledge type IDs to their names
+     * @throws SQLException If a database error occurs
+     */
+    private static HashMap<Integer, String> getKnowledgeTypeNames(Connection connection) throws SQLException {
+        HashMap<Integer, String> knowledgeTypeNames = new HashMap<>();
+        
+        String sql = "SELECT id, name FROM knowledge_types";
+        try (PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
+            
+            while (resultSet.next()) {
+                knowledgeTypeNames.put(resultSet.getInt("id"), resultSet.getString("name"));
+            }
+        }
+        return knowledgeTypeNames;
+    }
+    
+    /**
      * Seed the knowledge_bases table.
      * 
      * @param connection Database connection
@@ -245,8 +270,11 @@ public class DataSeeder {
      */
     private static void seedAgentKnowledgeBases(Connection connection) throws SQLException {
         LOGGER.info("Seeding agent_knowledge_bases table...");
-        // TODO: Implement agent knowledge base seeding
-        LOGGER.info("Seeded " + NUM_AGENT_KNOWLEDGE_BASES + " agent knowledge base relationships.");
+        
+        AgentKnowledgeBaseSeeder agentKnowledgeBaseSeeder = new AgentKnowledgeBaseSeeder(connection, NUM_AGENT_KNOWLEDGE_BASES);
+        agentKnowledgeBaseIds = agentKnowledgeBaseSeeder.seed();
+        
+        LOGGER.info("Seeded " + agentKnowledgeBaseIds.size() + " agent knowledge base relationships.");
     }
     
     /**
@@ -257,8 +285,14 @@ public class DataSeeder {
      */
     private static void seedKnowledgeSources(Connection connection) throws SQLException {
         LOGGER.info("Seeding knowledge_sources table...");
-        // TODO: Implement knowledge source seeding
-        LOGGER.info("Seeded " + NUM_KNOWLEDGE_SOURCES + " knowledge sources.");
+        
+        // Get knowledge type names for source type assignment
+        HashMap<Integer, String> knowledgeTypeNames = getKnowledgeTypeNames(connection);
+        
+        KnowledgeSourceSeeder knowledgeSourceSeeder = new KnowledgeSourceSeeder(connection, NUM_KNOWLEDGE_SOURCES, knowledgeBaseIds, knowledgeTypeIds, knowledgeTypeNames);
+        knowledgeSourceIds = knowledgeSourceSeeder.seed();
+        
+        LOGGER.info("Seeded " + knowledgeSourceIds.size() + " knowledge sources.");
     }
     
     /**

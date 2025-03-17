@@ -1,12 +1,14 @@
 package com.celestra.seeding.seeders;
 
+import com.celestra.dao.AgentDao;
+import com.celestra.dao.impl.AgentDaoImpl;
+import com.celestra.model.Agent;
 import com.celestra.enums.AgentStatus;
 import com.celestra.seeding.util.EnumUtil;
 import com.celestra.seeding.util.FakerUtil;
 import com.celestra.seeding.util.TimestampUtil;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -19,14 +21,11 @@ import java.util.logging.Logger;
 /**
  * Seeder class for the agents table.
  * This class is responsible for generating and inserting test data for agents.
+ * It uses the AgentDao to interact with the database.
  */
 public class AgentSeeder {
     
     private static final Logger LOGGER = Logger.getLogger(AgentSeeder.class.getName());
-    
-    private static final String INSERT_AGENT_SQL = 
-            "INSERT INTO agents (company_id, name, description, agent_protocol, status, created_at, updated_at) " +
-            "VALUES (?, ?, ?, ?, ?::agent_status, ?, ?)";
     
     // Agent status distribution (ACTIVE, DISABLED, ARCHIVED, DRAFT)
     private static final double[] AGENT_STATUS_DISTRIBUTION = {0.6, 0.15, 0.05, 0.2};
@@ -110,6 +109,7 @@ public class AgentSeeder {
     }
     
     private final Connection connection;
+    private final AgentDao agentDao;
     private final int numAgents;
     private final List<Integer> companyIds;
     private final Map<Integer, String> companyVerticals;
@@ -124,6 +124,7 @@ public class AgentSeeder {
      */
     public AgentSeeder(Connection connection, int numAgents, List<Integer> companyIds, Map<Integer, String> companyVerticals) {
         this.connection = connection;
+        this.agentDao = new AgentDaoImpl();
         this.numAgents = numAgents;
         this.companyIds = companyIds;
         this.companyVerticals = companyVerticals;
@@ -145,9 +146,7 @@ public class AgentSeeder {
         
         List<Integer> agentIds = new ArrayList<>();
         
-        try (PreparedStatement statement = connection.prepareStatement(
-                INSERT_AGENT_SQL, PreparedStatement.RETURN_GENERATED_KEYS)) {
-            
+        try {
             // Normalize the distribution weights
             double[] agentStatusWeights = EnumUtil.createNormalizedWeights(AgentStatus.class, AGENT_STATUS_DISTRIBUTION);
             
@@ -188,23 +187,20 @@ public class AgentSeeder {
                     Timestamp createdAt = timestamps[0];
                     Timestamp updatedAt = timestamps[1];
                     
-                    // Set parameters
-                    statement.setInt(1, companyId);
-                    statement.setString(2, name);
-                    statement.setString(3, description);
-                    statement.setString(4, agentProtocol);
-                    statement.setString(5, status.name());
-                    statement.setTimestamp(6, createdAt);
-                    statement.setTimestamp(7, updatedAt);
+                    // Create the agent object
+                    Agent agent = new Agent();
+                    agent.setCompanyId(companyId);
+                    agent.setName(name);
+                    agent.setDescription(description);
+                    agent.setAgentProtocol(agentProtocol);
+                    agent.setStatus(status);
+                    agent.setCreatedAt(createdAt);
+                    agent.setUpdatedAt(updatedAt);
                     
-                    // Execute the insert
-                    statement.executeUpdate();
-                    
-                    // Get the generated ID
-                    try (var generatedKeys = statement.getGeneratedKeys()) {
-                        if (generatedKeys.next()) {
-                            agentIds.add(generatedKeys.getInt(1));
-                        }
+                    // Save the agent
+                    Agent createdAgent = agentDao.create(agent);
+                    if (createdAgent != null && createdAgent.getId() > 0) {
+                        agentIds.add(createdAgent.getId());
                     }
                 }
             }

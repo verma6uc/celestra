@@ -1,5 +1,8 @@
 package com.celestra.seeding.seeders;
 
+import com.celestra.dao.KnowledgeBaseDao;
+import com.celestra.dao.impl.KnowledgeBaseDaoImpl;
+import com.celestra.model.KnowledgeBase;
 import com.celestra.enums.KnowledgeBaseStatus;
 import com.celestra.seeding.util.EnumUtil;
 import com.celestra.seeding.util.FakerUtil;
@@ -23,10 +26,6 @@ import java.util.logging.Logger;
 public class KnowledgeBaseSeeder {
     
     private static final Logger LOGGER = Logger.getLogger(KnowledgeBaseSeeder.class.getName());
-    
-    private static final String INSERT_KNOWLEDGE_BASE_SQL = 
-            "INSERT INTO knowledge_bases (company_id, name, description, status, created_at, updated_at) " +
-            "VALUES (?, ?, ?, ?::knowledge_base_status, ?, ?)";
     
     // Knowledge base status distribution (ACTIVE, BUILDING, DISABLED, ARCHIVED, DRAFT)
     private static final double[] KNOWLEDGE_BASE_STATUS_DISTRIBUTION = {0.5, 0.3, 0.05, 0.05, 0.1};
@@ -74,6 +73,7 @@ public class KnowledgeBaseSeeder {
     
     private final Connection connection;
     private final int numKnowledgeBases;
+    private final KnowledgeBaseDao knowledgeBaseDao;
     private final List<Integer> companyIds;
     private final Map<Integer, String> companyVerticals;
     
@@ -91,6 +91,7 @@ public class KnowledgeBaseSeeder {
         this.numKnowledgeBases = numKnowledgeBases;
         this.companyIds = companyIds;
         this.companyVerticals = companyVerticals;
+        this.knowledgeBaseDao = new KnowledgeBaseDaoImpl();
     }
     
     /**
@@ -109,9 +110,7 @@ public class KnowledgeBaseSeeder {
         
         List<Integer> knowledgeBaseIds = new ArrayList<>();
         
-        try (PreparedStatement statement = connection.prepareStatement(
-                INSERT_KNOWLEDGE_BASE_SQL, PreparedStatement.RETURN_GENERATED_KEYS)) {
-            
+        try {
             // Normalize the distribution weights
             double[] knowledgeBaseStatusWeights = EnumUtil.createNormalizedWeights(
                     KnowledgeBaseStatus.class, KNOWLEDGE_BASE_STATUS_DISTRIBUTION);
@@ -164,23 +163,20 @@ public class KnowledgeBaseSeeder {
                     Timestamp createdAt = timestamps[0];
                     Timestamp updatedAt = timestamps[1];
                     
-                    // Set parameters
-                    statement.setInt(1, companyId);
-                    statement.setString(2, name);
-                    statement.setString(3, description);
-                    statement.setString(4, status.name());
-                    statement.setTimestamp(5, createdAt);
-                    statement.setTimestamp(6, updatedAt);
+                    // Create the knowledge base object
+                    KnowledgeBase knowledgeBase = new KnowledgeBase();
+                    knowledgeBase.setCompanyId(companyId);
+                    knowledgeBase.setName(name);
+                    knowledgeBase.setDescription(description);
+                    knowledgeBase.setStatus(status);
+                    knowledgeBase.setCreatedAt(createdAt);
+                    knowledgeBase.setUpdatedAt(updatedAt);
                     
-                    // Execute the insert
-                    statement.executeUpdate();
-                    
-                    // Get the generated ID
-                    try (var generatedKeys = statement.getGeneratedKeys()) {
-                        if (generatedKeys.next()) {
-                            knowledgeBaseIds.add(generatedKeys.getInt(1));
+                    // Save the knowledge base
+                    KnowledgeBase createdBase = knowledgeBaseDao.create(knowledgeBase);
+                    if (createdBase != null && createdBase.getId() > 0) {
+                        knowledgeBaseIds.add(createdBase.getId());
                         }
-                    }
                 }
             }
             

@@ -1,5 +1,8 @@
 package com.celestra.seeding.seeders;
 
+import com.celestra.dao.CompanyDao;
+import com.celestra.dao.impl.CompanyDaoImpl;
+import com.celestra.model.Company;
 import com.celestra.enums.CompanySize;
 import com.celestra.enums.CompanyStatus;
 import com.celestra.enums.CompanyVertical;
@@ -24,10 +27,6 @@ public class CompanySeeder {
     
     private static final Logger LOGGER = Logger.getLogger(CompanySeeder.class.getName());
     
-    private static final String INSERT_COMPANY_SQL = 
-            "INSERT INTO companies (name, description, size, vertical, status, created_at, updated_at) " +
-            "VALUES (?, ?, ?::company_size, ?::company_vertical, ?::company_status, ?, ?)";
-    
     // Company size distribution (SMALL, MEDIUM, LARGE, ENTERPRISE)
     private static final double[] COMPANY_SIZE_DISTRIBUTION = {0.4, 0.3, 0.2, 0.1};
     
@@ -38,6 +37,7 @@ public class CompanySeeder {
     private static final double[] COMPANY_STATUS_DISTRIBUTION = {0.8, 0.15, 0.05};
     
     private final Connection connection;
+    private final CompanyDao companyDao;
     private final int numCompanies;
     
     /**
@@ -48,6 +48,7 @@ public class CompanySeeder {
      */
     public CompanySeeder(Connection connection, int numCompanies) {
         this.connection = connection;
+        this.companyDao = new CompanyDaoImpl();
         this.numCompanies = numCompanies;
     }
     
@@ -62,9 +63,7 @@ public class CompanySeeder {
         
         List<Integer> companyIds = new ArrayList<>();
         
-        try (PreparedStatement statement = connection.prepareStatement(
-                INSERT_COMPANY_SQL, PreparedStatement.RETURN_GENERATED_KEYS)) {
-            
+        try {
             // Normalize the distribution weights
             double[] companySizeWeights = EnumUtil.createNormalizedWeights(CompanySize.class, COMPANY_SIZE_DISTRIBUTION);
             double[] companyVerticalWeights = EnumUtil.createNormalizedWeights(CompanyVertical.class, COMPANY_VERTICAL_DISTRIBUTION);
@@ -99,24 +98,21 @@ public class CompanySeeder {
                 Timestamp createdAt = timestamps[0];
                 Timestamp updatedAt = timestamps[1];
                 
-                // Set parameters
-                statement.setString(1, name);
-                statement.setString(2, description);
-                statement.setString(3, size.name());
-                statement.setString(4, vertical.name());
-                statement.setString(5, status.name());
-                statement.setTimestamp(6, createdAt);
-                statement.setTimestamp(7, updatedAt);
+                // Create the company object
+                Company company = new Company();
+                company.setName(name);
+                company.setDescription(description);
+                company.setSize(size);
+                company.setVertical(vertical);
+                company.setStatus(status);
+                company.setCreatedAt(createdAt);
+                company.setUpdatedAt(updatedAt);
                 
-                // Execute the insert
-                statement.executeUpdate();
-                
-                // Get the generated ID
-                try (var generatedKeys = statement.getGeneratedKeys()) {
-                    if (generatedKeys.next()) {
-                        companyIds.add(generatedKeys.getInt(1));
+                // Save the company
+                Company createdCompany = companyDao.create(company);
+                if (createdCompany != null && createdCompany.getId() > 0) {
+                    companyIds.add(createdCompany.getId());
                     }
-                }
             }
             
             LOGGER.info("Successfully seeded " + companyIds.size() + " companies.");
