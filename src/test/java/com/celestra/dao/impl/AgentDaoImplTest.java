@@ -1,8 +1,13 @@
 package com.celestra.dao.impl;
 
+import static org.junit.Assert.*;
+
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
+
+import org.junit.Before;
+import org.junit.Test;
 
 import com.celestra.dao.AgentDao;
 import com.celestra.dao.BaseDaoTest;
@@ -17,48 +22,11 @@ public class AgentDaoImplTest extends BaseDaoTest {
     private AgentDao agentDao;
     
     /**
-     * Main method to run the tests.
-     * 
-     * @param args Command line arguments (not used)
+     * Initialize the DAO before each test.
      */
-    public static void main(String[] args) {
-        AgentDaoImplTest test = new AgentDaoImplTest();
-        test.runTests();
-    }
-    
-    /**
-     * Constructor.
-     */
-    public AgentDaoImplTest() {
+    @Before
+    public void initialize() {
         agentDao = new AgentDaoImpl();
-    }
-    
-    /**
-     * Run all tests.
-     */
-    public void runTests() {
-        try {
-            setUp();
-            
-            testCreate();
-            testFindById();
-            testFindAll();
-            testUpdate();
-            testDelete();
-            testFindByCompanyId();
-            testFindByStatus();
-            testFindByCompanyIdAndStatus();
-            testFindByNameContaining();
-            testUpdateStatus();
-            testUpdateAgentProtocol();
-            
-            tearDown();
-            
-            System.out.println("All tests completed.");
-        } catch (Exception e) {
-            System.err.println("Error running tests: " + e.getMessage());
-            e.printStackTrace();
-        }
     }
     
     @Override
@@ -90,269 +58,245 @@ public class AgentDaoImplTest extends BaseDaoTest {
     /**
      * Test the create method.
      */
-    private void testCreate() {
-        try {
-            // Create a new agent
-            Agent agent = new Agent();
-            agent.setCompanyId(1);
-            agent.setName("Test Agent Create");
-            agent.setDescription("Test Description Create");
-            agent.setAgentProtocol("{\"type\":\"test\"}");
-            agent.setStatus(AgentStatus.ACTIVE);
-            
-            Agent createdAgent = agentDao.create(agent);
-            
-            // Verify the agent was created
-            boolean success = createdAgent.getId() > 0;
-            printTestResult("testCreate", success);
-            
-            // Clean up
-            if (success) {
-                agentDao.delete(createdAgent.getId());
-            }
-        } catch (Exception e) {
-            printTestFailure("testCreate", e);
-        }
+    @Test
+    public void testCreate() throws SQLException {
+        // Create a new agent
+        Agent agent = new Agent();
+        agent.setCompanyId(1);
+        agent.setName("Test Agent Create");
+        agent.setDescription("Test Description Create");
+        agent.setAgentProtocol("{\"type\":\"test\"}");
+        agent.setStatus(AgentStatus.ACTIVE);
+        
+        Agent createdAgent = agentDao.create(agent);
+        
+        // Verify the agent was created
+        assertNotNull("Created agent should not be null", createdAgent);
+        assertTrue("Created agent should have an ID", createdAgent.getId() > 0);
+        
+        // Clean up
+        boolean deleted = agentDao.delete(createdAgent.getId());
+        assertTrue("Agent should be deleted successfully", deleted);
     }
     
     /**
      * Test the findById method.
      */
-    private void testFindById() {
-        try {
-            // Find all agents
-            List<Agent> agents = agentDao.findAll();
-            
-            // Verify there are agents
-            if (agents.isEmpty()) {
-                printTestResult("testFindById", false, "No agents found");
-                return;
-            }
-            
-            // Get the first agent
-            Agent agent = agents.get(0);
-            
-            // Find the agent by ID
-            Optional<Agent> foundAgent = agentDao.findById(agent.getId());
-            
-            // Verify the agent was found
-            boolean success = foundAgent.isPresent() && 
-                              foundAgent.get().getId().equals(agent.getId()) &&
-                              foundAgent.get().getName().equals(agent.getName());
-            
-            printTestResult("testFindById", success);
-        } catch (Exception e) {
-            printTestFailure("testFindById", e);
-        }
+    @Test
+    public void testFindById() throws SQLException {
+        // Find all agents
+        List<Agent> agents = agentDao.findAll();
+        
+        // Verify there are agents
+        assertFalse("There should be agents in the database", agents.isEmpty());
+        
+        // Get the first agent
+        Agent agent = agents.get(0);
+        
+        // Find the agent by ID
+        Optional<Agent> foundAgent = agentDao.findById(agent.getId());
+        
+        // Verify the agent was found
+        assertTrue("Agent should be found by ID", foundAgent.isPresent());
+        assertEquals("Found agent ID should match", agent.getId(), foundAgent.get().getId());
+        assertEquals("Found agent name should match", agent.getName(), foundAgent.get().getName());
     }
     
     /**
      * Test the findAll method.
      */
-    private void testFindAll() {
-        try {
-            // Find all agents
-            List<Agent> agents = agentDao.findAll();
-            
-            // Verify there are agents
-            boolean success = !agents.isEmpty();
-            printTestResult("testFindAll", success, "Found " + agents.size() + " agents");
-        } catch (Exception e) {
-            printTestFailure("testFindAll", e);
-        }
+    @Test
+    public void testFindAll() throws SQLException {
+        // Find all agents
+        List<Agent> agents = agentDao.findAll();
+        
+        // Verify there are agents
+        assertFalse("There should be agents in the database", agents.isEmpty());
+        assertTrue("There should be at least 3 agents", agents.size() >= 3);
     }
     
     /**
      * Test the update method.
      */
-    private void testUpdate() {
-        try {
-            // Create a new agent
-            Agent agent = new Agent();
-            agent.setCompanyId(1);
-            agent.setName("Test Agent Update");
-            agent.setDescription("Test Description Update");
-            agent.setAgentProtocol("{\"type\":\"test\"}");
-            agent.setStatus(AgentStatus.ACTIVE);
-            
-            Agent createdAgent = agentDao.create(agent);
-            
-            // Update the agent
-            createdAgent.setName("Test Agent Updated");
-            createdAgent.setDescription("Test Description Updated");
-            
-            Agent updatedAgent = agentDao.update(createdAgent);
-            
-            // Verify the agent was updated
-            boolean success = updatedAgent.getName().equals("Test Agent Updated") &&
-                              updatedAgent.getDescription().equals("Test Description Updated");
-            
-            printTestResult("testUpdate", success);
-            
-            // Clean up
-            agentDao.delete(createdAgent.getId());
-        } catch (Exception e) {
-            printTestFailure("testUpdate", e);
-        }
+    @Test
+    public void testUpdate() throws SQLException {
+        // Create a new agent
+        Agent agent = new Agent();
+        agent.setCompanyId(1);
+        agent.setName("Test Agent Update");
+        agent.setDescription("Test Description Update");
+        agent.setAgentProtocol("{\"type\":\"test\"}");
+        agent.setStatus(AgentStatus.ACTIVE);
+        
+        Agent createdAgent = agentDao.create(agent);
+        
+        // Update the agent
+        createdAgent.setName("Test Agent Updated");
+        createdAgent.setDescription("Test Description Updated");
+        
+        Agent updatedAgent = agentDao.update(createdAgent);
+        
+        // Verify the agent was updated
+        assertEquals("Agent name should be updated", "Test Agent Updated", updatedAgent.getName());
+        assertEquals("Agent description should be updated", "Test Description Updated", updatedAgent.getDescription());
+        
+        // Clean up
+        boolean deleted = agentDao.delete(createdAgent.getId());
+        assertTrue("Agent should be deleted successfully", deleted);
     }
     
     /**
      * Test the delete method.
      */
-    private void testDelete() {
-        try {
-            // Create a new agent
-            Agent agent = new Agent();
-            agent.setCompanyId(1);
-            agent.setName("Test Agent Delete");
-            agent.setDescription("Test Description Delete");
-            agent.setAgentProtocol("{\"type\":\"test\"}");
-            agent.setStatus(AgentStatus.ACTIVE);
-            
-            Agent createdAgent = agentDao.create(agent);
-            
-            // Delete the agent
-            boolean deleted = agentDao.delete(createdAgent.getId());
-            
-            // Verify the agent was deleted
-            boolean success = deleted && !agentDao.findById(createdAgent.getId()).isPresent();
-            
-            printTestResult("testDelete", success);
-        } catch (Exception e) {
-            printTestFailure("testDelete", e);
-        }
+    @Test
+    public void testDelete() throws SQLException {
+        // Create a new agent
+        Agent agent = new Agent();
+        agent.setCompanyId(1);
+        agent.setName("Test Agent Delete");
+        agent.setDescription("Test Description Delete");
+        agent.setAgentProtocol("{\"type\":\"test\"}");
+        agent.setStatus(AgentStatus.ACTIVE);
+        
+        Agent createdAgent = agentDao.create(agent);
+        
+        // Delete the agent
+        boolean deleted = agentDao.delete(createdAgent.getId());
+        
+        // Verify the agent was deleted
+        assertTrue("Agent should be deleted successfully", deleted);
+        
+        Optional<Agent> foundAgent = agentDao.findById(createdAgent.getId());
+        assertFalse("Agent should not be found after deletion", foundAgent.isPresent());
     }
     
     /**
      * Test the findByCompanyId method.
      */
-    private void testFindByCompanyId() {
-        try {
-            // Find agents by company ID
-            List<Agent> agents = agentDao.findByCompanyId(1);
-            
-            // Verify there are agents
-            boolean success = !agents.isEmpty();
-            printTestResult("testFindByCompanyId", success, "Found " + agents.size() + " agents for company ID 1");
-        } catch (Exception e) {
-            printTestFailure("testFindByCompanyId", e);
+    @Test
+    public void testFindByCompanyId() throws SQLException {
+        // Find agents by company ID
+        List<Agent> agents = agentDao.findByCompanyId(1);
+        
+        // Verify there are agents
+        assertFalse("There should be agents for company ID 1", agents.isEmpty());
+        
+        // Verify all agents have the correct company ID
+        for (Agent agent : agents) {
+            assertEquals("Agent company ID should be 1", Integer.valueOf(1), agent.getCompanyId());
         }
     }
     
     /**
      * Test the findByStatus method.
      */
-    private void testFindByStatus() {
-        try {
-            // Find agents by status
-            List<Agent> agents = agentDao.findByStatus(AgentStatus.ACTIVE);
-            
-            // Verify there are agents
-            boolean success = !agents.isEmpty();
-            printTestResult("testFindByStatus", success, "Found " + agents.size() + " active agents");
-        } catch (Exception e) {
-            printTestFailure("testFindByStatus", e);
+    @Test
+    public void testFindByStatus() throws SQLException {
+        // Find agents by status
+        List<Agent> agents = agentDao.findByStatus(AgentStatus.ACTIVE);
+        
+        // Verify there are agents
+        assertFalse("There should be active agents", agents.isEmpty());
+        
+        // Verify all agents have the correct status
+        for (Agent agent : agents) {
+            assertEquals("Agent status should be ACTIVE", AgentStatus.ACTIVE, agent.getStatus());
         }
     }
     
     /**
      * Test the findByCompanyIdAndStatus method.
      */
-    private void testFindByCompanyIdAndStatus() {
-        try {
-            // Find agents by company ID and status
-            List<Agent> agents = agentDao.findByCompanyIdAndStatus(1, AgentStatus.ACTIVE);
-            
-            // Verify there are agents
-            boolean success = !agents.isEmpty();
-            printTestResult("testFindByCompanyIdAndStatus", success, 
-                    "Found " + agents.size() + " active agents for company ID 1");
-        } catch (Exception e) {
-            printTestFailure("testFindByCompanyIdAndStatus", e);
+    @Test
+    public void testFindByCompanyIdAndStatus() throws SQLException {
+        // Find agents by company ID and status
+        List<Agent> agents = agentDao.findByCompanyIdAndStatus(1, AgentStatus.ACTIVE);
+        
+        // Verify there are agents
+        assertFalse("There should be active agents for company ID 1", agents.isEmpty());
+        
+        // Verify all agents have the correct company ID and status
+        for (Agent agent : agents) {
+            assertEquals("Agent company ID should be 1", Integer.valueOf(1), agent.getCompanyId());
+            assertEquals("Agent status should be ACTIVE", AgentStatus.ACTIVE, agent.getStatus());
         }
     }
     
     /**
      * Test the findByNameContaining method.
      */
-    private void testFindByNameContaining() {
-        try {
-            // Find agents by name
-            List<Agent> agents = agentDao.findByNameContaining("Test");
-            
-            // Verify there are agents
-            boolean success = !agents.isEmpty();
-            printTestResult("testFindByNameContaining", success, 
-                    "Found " + agents.size() + " agents with 'Test' in the name");
-        } catch (Exception e) {
-            printTestFailure("testFindByNameContaining", e);
+    @Test
+    public void testFindByNameContaining() throws SQLException {
+        // Find agents by name
+        List<Agent> agents = agentDao.findByNameContaining("Test");
+        
+        // Verify there are agents
+        assertFalse("There should be agents with 'Test' in the name", agents.isEmpty());
+        
+        // Verify all agents have the correct name pattern
+        for (Agent agent : agents) {
+            assertTrue("Agent name should contain 'Test'", agent.getName().contains("Test"));
         }
     }
     
     /**
      * Test the updateStatus method.
      */
-    private void testUpdateStatus() {
-        try {
-            // Create a new agent
-            Agent agent = new Agent();
-            agent.setCompanyId(1);
-            agent.setName("Test Agent Status");
-            agent.setDescription("Test Description Status");
-            agent.setAgentProtocol("{\"type\":\"test\"}");
-            agent.setStatus(AgentStatus.ACTIVE);
-            
-            Agent createdAgent = agentDao.create(agent);
-            
-            // Update the agent status
-            boolean updated = agentDao.updateStatus(createdAgent.getId(), AgentStatus.DISABLED);
-            
-            // Verify the agent status was updated
-            Optional<Agent> updatedAgent = agentDao.findById(createdAgent.getId());
-            boolean success = updated && 
-                              updatedAgent.isPresent() && 
-                              updatedAgent.get().getStatus() == AgentStatus.DISABLED;
-            
-            printTestResult("testUpdateStatus", success);
-            
-            // Clean up
-            agentDao.delete(createdAgent.getId());
-        } catch (Exception e) {
-            printTestFailure("testUpdateStatus", e);
-        }
+    @Test
+    public void testUpdateStatus() throws SQLException {
+        // Create a new agent
+        Agent agent = new Agent();
+        agent.setCompanyId(1);
+        agent.setName("Test Agent Status");
+        agent.setDescription("Test Description Status");
+        agent.setAgentProtocol("{\"type\":\"test\"}");
+        agent.setStatus(AgentStatus.ACTIVE);
+        
+        Agent createdAgent = agentDao.create(agent);
+        
+        // Update the agent status
+        boolean updated = agentDao.updateStatus(createdAgent.getId(), AgentStatus.DISABLED);
+        
+        // Verify the agent status was updated
+        assertTrue("Agent status should be updated successfully", updated);
+        
+        Optional<Agent> updatedAgent = agentDao.findById(createdAgent.getId());
+        assertTrue("Agent should be found after status update", updatedAgent.isPresent());
+        assertEquals("Agent status should be DISABLED", AgentStatus.DISABLED, updatedAgent.get().getStatus());
+        
+        // Clean up
+        boolean deleted = agentDao.delete(createdAgent.getId());
+        assertTrue("Agent should be deleted successfully", deleted);
     }
     
     /**
      * Test the updateAgentProtocol method.
      */
-    private void testUpdateAgentProtocol() {
-        try {
-            // Create a new agent
-            Agent agent = new Agent();
-            agent.setCompanyId(1);
-            agent.setName("Test Agent Protocol");
-            agent.setDescription("Test Description Protocol");
-            agent.setAgentProtocol("{\"type\":\"old\"}");
-            agent.setStatus(AgentStatus.ACTIVE);
-            
-            Agent createdAgent = agentDao.create(agent);
-            
-            // Update the agent protocol
-            String newProtocol = "{\"type\":\"new\",\"version\":2}";
-            boolean updated = agentDao.updateAgentProtocol(createdAgent.getId(), newProtocol);
-            
-            // Verify the agent protocol was updated
-            Optional<Agent> updatedAgent = agentDao.findById(createdAgent.getId());
-            boolean success = updated && 
-                              updatedAgent.isPresent() && 
-                              updatedAgent.get().getAgentProtocol().equals(newProtocol);
-            
-            printTestResult("testUpdateAgentProtocol", success);
-            
-            // Clean up
-            agentDao.delete(createdAgent.getId());
-        } catch (Exception e) {
-            printTestFailure("testUpdateAgentProtocol", e);
-        }
+    @Test
+    public void testUpdateAgentProtocol() throws SQLException {
+        // Create a new agent
+        Agent agent = new Agent();
+        agent.setCompanyId(1);
+        agent.setName("Test Agent Protocol");
+        agent.setDescription("Test Description Protocol");
+        agent.setAgentProtocol("{\"type\":\"old\"}");
+        agent.setStatus(AgentStatus.ACTIVE);
+        
+        Agent createdAgent = agentDao.create(agent);
+        
+        // Update the agent protocol
+        String newProtocol = "{\"type\":\"new\",\"version\":2}";
+        boolean updated = agentDao.updateAgentProtocol(createdAgent.getId(), newProtocol);
+        
+        // Verify the agent protocol was updated
+        assertTrue("Agent protocol should be updated successfully", updated);
+        
+        Optional<Agent> updatedAgent = agentDao.findById(createdAgent.getId());
+        assertTrue("Agent should be found after protocol update", updatedAgent.isPresent());
+        assertEquals("Agent protocol should be updated", newProtocol, updatedAgent.get().getAgentProtocol());
+        
+        // Clean up
+        boolean deleted = agentDao.delete(createdAgent.getId());
+        assertTrue("Agent should be deleted successfully", deleted);
     }
 }

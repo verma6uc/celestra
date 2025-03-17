@@ -1,8 +1,13 @@
 package com.celestra.dao.impl;
 
+import static org.junit.Assert.*;
+
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
+
+import org.junit.Before;
+import org.junit.Test;
 
 import com.celestra.dao.AgentKnowledgeBaseDao;
 import com.celestra.dao.BaseDaoTest;
@@ -16,48 +21,11 @@ public class AgentKnowledgeBaseDaoImplTest extends BaseDaoTest {
     private AgentKnowledgeBaseDao agentKnowledgeBaseDao;
     
     /**
-     * Main method to run the tests.
-     * 
-     * @param args Command line arguments (not used)
+     * Initialize the DAO before each test.
      */
-    public static void main(String[] args) {
-        AgentKnowledgeBaseDaoImplTest test = new AgentKnowledgeBaseDaoImplTest();
-        test.runTests();
-    }
-    
-    /**
-     * Constructor.
-     */
-    public AgentKnowledgeBaseDaoImplTest() {
+    @Before
+    public void initialize() {
         agentKnowledgeBaseDao = new AgentKnowledgeBaseDaoImpl();
-    }
-    
-    /**
-     * Run all tests.
-     */
-    public void runTests() {
-        try {
-            setUp();
-            
-            testCreate();
-            testFindById();
-            testFindAll();
-            testUpdate();
-            testDelete();
-            testFindByAgentId();
-            testFindByKnowledgeBaseId();
-            testExistsByAgentIdAndKnowledgeBaseId();
-            testDeleteByAgentId();
-            testDeleteByKnowledgeBaseId();
-            testDeleteByAgentIdAndKnowledgeBaseId();
-            
-            tearDown();
-            
-            System.out.println("All tests completed.");
-        } catch (Exception e) {
-            System.err.println("Error running tests: " + e.getMessage());
-            e.printStackTrace();
-        }
     }
     
     @Override
@@ -89,258 +57,226 @@ public class AgentKnowledgeBaseDaoImplTest extends BaseDaoTest {
     /**
      * Test the create method.
      */
-    private void testCreate() {
-        try {
-            // Create a new agent-knowledge base association
-            AgentKnowledgeBase agentKnowledgeBase = new AgentKnowledgeBase();
-            agentKnowledgeBase.setAgentId(3);
-            agentKnowledgeBase.setKnowledgeBaseId(3);
-            
-            AgentKnowledgeBase createdAgentKnowledgeBase = agentKnowledgeBaseDao.create(agentKnowledgeBase);
-            
-            // Verify the agent-knowledge base association was created
-            boolean success = createdAgentKnowledgeBase.getId() > 0;
-            printTestResult("testCreate", success);
-            
-            // Clean up
-            if (success) {
-                agentKnowledgeBaseDao.delete(createdAgentKnowledgeBase.getId());
-            }
-        } catch (Exception e) {
-            printTestFailure("testCreate", e);
-        }
+    @Test
+    public void testCreate() throws SQLException {
+        // Create a new agent-knowledge base association
+        AgentKnowledgeBase agentKnowledgeBase = new AgentKnowledgeBase();
+        agentKnowledgeBase.setAgentId(3);
+        agentKnowledgeBase.setKnowledgeBaseId(3);
+        
+        AgentKnowledgeBase createdAgentKnowledgeBase = agentKnowledgeBaseDao.create(agentKnowledgeBase);
+        
+        // Verify the agent-knowledge base association was created
+        assertNotNull("Created association should not be null", createdAgentKnowledgeBase);
+        assertTrue("Created association should have an ID", createdAgentKnowledgeBase.getId() > 0);
+        
+        // Clean up
+        boolean deleted = agentKnowledgeBaseDao.delete(createdAgentKnowledgeBase.getId());
+        assertTrue("Association should be deleted successfully", deleted);
     }
     
     /**
      * Test the findById method.
      */
-    private void testFindById() {
-        try {
-            // Find all agent-knowledge base associations
-            List<AgentKnowledgeBase> agentKnowledgeBases = agentKnowledgeBaseDao.findAll();
-            
-            // Verify there are agent-knowledge base associations
-            if (agentKnowledgeBases.isEmpty()) {
-                printTestResult("testFindById", false, "No agent-knowledge base associations found");
-                return;
-            }
-            
-            // Get the first agent-knowledge base association
-            AgentKnowledgeBase agentKnowledgeBase = agentKnowledgeBases.get(0);
-            
-            // Find the agent-knowledge base association by ID
-            Optional<AgentKnowledgeBase> foundAgentKnowledgeBase = 
-                    agentKnowledgeBaseDao.findById(agentKnowledgeBase.getId());
-            
-            // Verify the agent-knowledge base association was found
-            boolean success = foundAgentKnowledgeBase.isPresent() && 
-                              foundAgentKnowledgeBase.get().getId().equals(agentKnowledgeBase.getId()) &&
-                              foundAgentKnowledgeBase.get().getAgentId().equals(agentKnowledgeBase.getAgentId()) &&
-                              foundAgentKnowledgeBase.get().getKnowledgeBaseId().equals(agentKnowledgeBase.getKnowledgeBaseId());
-            
-            printTestResult("testFindById", success);
-        } catch (Exception e) {
-            printTestFailure("testFindById", e);
-        }
+    @Test
+    public void testFindById() throws SQLException {
+        // Find all agent-knowledge base associations
+        List<AgentKnowledgeBase> agentKnowledgeBases = agentKnowledgeBaseDao.findAll();
+        
+        // Verify there are agent-knowledge base associations
+        assertFalse("There should be associations in the database", agentKnowledgeBases.isEmpty());
+        
+        // Get the first agent-knowledge base association
+        AgentKnowledgeBase agentKnowledgeBase = agentKnowledgeBases.get(0);
+        
+        // Find the agent-knowledge base association by ID
+        Optional<AgentKnowledgeBase> foundAgentKnowledgeBase = 
+                agentKnowledgeBaseDao.findById(agentKnowledgeBase.getId());
+        
+        // Verify the agent-knowledge base association was found
+        assertTrue("Association should be found by ID", foundAgentKnowledgeBase.isPresent());
+        assertEquals("Found association ID should match", agentKnowledgeBase.getId(), foundAgentKnowledgeBase.get().getId());
+        assertEquals("Found association agent ID should match", agentKnowledgeBase.getAgentId(), foundAgentKnowledgeBase.get().getAgentId());
+        assertEquals("Found association knowledge base ID should match", agentKnowledgeBase.getKnowledgeBaseId(), foundAgentKnowledgeBase.get().getKnowledgeBaseId());
     }
     
     /**
      * Test the findAll method.
      */
-    private void testFindAll() {
-        try {
-            // Find all agent-knowledge base associations
-            List<AgentKnowledgeBase> agentKnowledgeBases = agentKnowledgeBaseDao.findAll();
-            
-            // Verify there are agent-knowledge base associations
-            boolean success = !agentKnowledgeBases.isEmpty();
-            printTestResult("testFindAll", success, 
-                    "Found " + agentKnowledgeBases.size() + " agent-knowledge base associations");
-        } catch (Exception e) {
-            printTestFailure("testFindAll", e);
-        }
+    @Test
+    public void testFindAll() throws SQLException {
+        // Find all agent-knowledge base associations
+        List<AgentKnowledgeBase> agentKnowledgeBases = agentKnowledgeBaseDao.findAll();
+        
+        // Verify there are agent-knowledge base associations
+        assertFalse("There should be associations in the database", agentKnowledgeBases.isEmpty());
+        assertTrue("There should be at least 3 associations", agentKnowledgeBases.size() >= 3);
     }
     
     /**
      * Test the update method.
      */
-    private void testUpdate() {
-        try {
-            // Create a new agent-knowledge base association
-            AgentKnowledgeBase agentKnowledgeBase = new AgentKnowledgeBase();
-            agentKnowledgeBase.setAgentId(3);
-            agentKnowledgeBase.setKnowledgeBaseId(3);
-            
-            AgentKnowledgeBase createdAgentKnowledgeBase = agentKnowledgeBaseDao.create(agentKnowledgeBase);
-            
-            // Update the agent-knowledge base association
-            createdAgentKnowledgeBase.setAgentId(2);
-            createdAgentKnowledgeBase.setKnowledgeBaseId(2);
-            
-            AgentKnowledgeBase updatedAgentKnowledgeBase = agentKnowledgeBaseDao.update(createdAgentKnowledgeBase);
-            
-            // Verify the agent-knowledge base association was updated
-            boolean success = updatedAgentKnowledgeBase.getAgentId() == 2 &&
-                              updatedAgentKnowledgeBase.getKnowledgeBaseId() == 2;
-            
-            printTestResult("testUpdate", success);
-            
-            // Clean up
-            agentKnowledgeBaseDao.delete(createdAgentKnowledgeBase.getId());
-        } catch (Exception e) {
-            printTestFailure("testUpdate", e);
-        }
+    @Test
+    public void testUpdate() throws SQLException {
+        // Create a new agent-knowledge base association
+        AgentKnowledgeBase agentKnowledgeBase = new AgentKnowledgeBase();
+        agentKnowledgeBase.setAgentId(3);
+        agentKnowledgeBase.setKnowledgeBaseId(3);
+        
+        AgentKnowledgeBase createdAgentKnowledgeBase = agentKnowledgeBaseDao.create(agentKnowledgeBase);
+        
+        // Update the agent-knowledge base association
+        createdAgentKnowledgeBase.setAgentId(2);
+        createdAgentKnowledgeBase.setKnowledgeBaseId(2);
+        
+        AgentKnowledgeBase updatedAgentKnowledgeBase = agentKnowledgeBaseDao.update(createdAgentKnowledgeBase);
+        
+        // Verify the agent-knowledge base association was updated
+        assertEquals("Association agent ID should be updated", Integer.valueOf(2), updatedAgentKnowledgeBase.getAgentId());
+        assertEquals("Association knowledge base ID should be updated", Integer.valueOf(2), updatedAgentKnowledgeBase.getKnowledgeBaseId());
+        
+        // Clean up
+        boolean deleted = agentKnowledgeBaseDao.delete(createdAgentKnowledgeBase.getId());
+        assertTrue("Association should be deleted successfully", deleted);
     }
     
     /**
      * Test the delete method.
      */
-    private void testDelete() {
-        try {
-            // Create a new agent-knowledge base association
-            AgentKnowledgeBase agentKnowledgeBase = new AgentKnowledgeBase();
-            agentKnowledgeBase.setAgentId(3);
-            agentKnowledgeBase.setKnowledgeBaseId(3);
-            
-            AgentKnowledgeBase createdAgentKnowledgeBase = agentKnowledgeBaseDao.create(agentKnowledgeBase);
-            
-            // Delete the agent-knowledge base association
-            boolean deleted = agentKnowledgeBaseDao.delete(createdAgentKnowledgeBase.getId());
-            
-            // Verify the agent-knowledge base association was deleted
-            boolean success = deleted && 
-                              !agentKnowledgeBaseDao.findById(createdAgentKnowledgeBase.getId()).isPresent();
-            
-            printTestResult("testDelete", success);
-        } catch (Exception e) {
-            printTestFailure("testDelete", e);
-        }
+    @Test
+    public void testDelete() throws SQLException {
+        // Create a new agent-knowledge base association
+        AgentKnowledgeBase agentKnowledgeBase = new AgentKnowledgeBase();
+        agentKnowledgeBase.setAgentId(3);
+        agentKnowledgeBase.setKnowledgeBaseId(3);
+        
+        AgentKnowledgeBase createdAgentKnowledgeBase = agentKnowledgeBaseDao.create(agentKnowledgeBase);
+        
+        // Delete the agent-knowledge base association
+        boolean deleted = agentKnowledgeBaseDao.delete(createdAgentKnowledgeBase.getId());
+        
+        // Verify the agent-knowledge base association was deleted
+        assertTrue("Association should be deleted successfully", deleted);
+        
+        Optional<AgentKnowledgeBase> foundAgentKnowledgeBase = agentKnowledgeBaseDao.findById(createdAgentKnowledgeBase.getId());
+        assertFalse("Association should not be found after deletion", foundAgentKnowledgeBase.isPresent());
     }
     
     /**
      * Test the findByAgentId method.
      */
-    private void testFindByAgentId() {
-        try {
-            // Find agent-knowledge base associations by agent ID
-            List<AgentKnowledgeBase> agentKnowledgeBases = agentKnowledgeBaseDao.findByAgentId(1);
-            
-            // Verify there are agent-knowledge base associations
-            boolean success = !agentKnowledgeBases.isEmpty();
-            printTestResult("testFindByAgentId", success, 
-                    "Found " + agentKnowledgeBases.size() + " agent-knowledge base associations for agent ID 1");
-        } catch (Exception e) {
-            printTestFailure("testFindByAgentId", e);
+    @Test
+    public void testFindByAgentId() throws SQLException {
+        // Find agent-knowledge base associations by agent ID
+        List<AgentKnowledgeBase> agentKnowledgeBases = agentKnowledgeBaseDao.findByAgentId(1);
+        
+        // Verify there are agent-knowledge base associations
+        assertFalse("There should be associations for agent ID 1", agentKnowledgeBases.isEmpty());
+        
+        // Verify all associations have the correct agent ID
+        for (AgentKnowledgeBase agentKnowledgeBase : agentKnowledgeBases) {
+            assertEquals("Association agent ID should be 1", Integer.valueOf(1), agentKnowledgeBase.getAgentId());
         }
     }
     
     /**
      * Test the findByKnowledgeBaseId method.
      */
-    private void testFindByKnowledgeBaseId() {
-        try {
-            // Find agent-knowledge base associations by knowledge base ID
-            List<AgentKnowledgeBase> agentKnowledgeBases = agentKnowledgeBaseDao.findByKnowledgeBaseId(1);
-            
-            // Verify there are agent-knowledge base associations
-            boolean success = !agentKnowledgeBases.isEmpty();
-            printTestResult("testFindByKnowledgeBaseId", success, 
-                    "Found " + agentKnowledgeBases.size() + 
-                    " agent-knowledge base associations for knowledge base ID 1");
-        } catch (Exception e) {
-            printTestFailure("testFindByKnowledgeBaseId", e);
+    @Test
+    public void testFindByKnowledgeBaseId() throws SQLException {
+        // Find agent-knowledge base associations by knowledge base ID
+        List<AgentKnowledgeBase> agentKnowledgeBases = agentKnowledgeBaseDao.findByKnowledgeBaseId(1);
+        
+        // Verify there are agent-knowledge base associations
+        assertFalse("There should be associations for knowledge base ID 1", agentKnowledgeBases.isEmpty());
+        
+        // Verify all associations have the correct knowledge base ID
+        for (AgentKnowledgeBase agentKnowledgeBase : agentKnowledgeBases) {
+            assertEquals("Association knowledge base ID should be 1", Integer.valueOf(1), agentKnowledgeBase.getKnowledgeBaseId());
         }
     }
     
     /**
      * Test the existsByAgentIdAndKnowledgeBaseId method.
      */
-    private void testExistsByAgentIdAndKnowledgeBaseId() {
-        try {
-            // Check if an association exists
-            boolean exists = agentKnowledgeBaseDao.existsByAgentIdAndKnowledgeBaseId(1, 1);
-            
-            // Verify the association exists
-            printTestResult("testExistsByAgentIdAndKnowledgeBaseId", exists, 
-                    "Association between agent ID 1 and knowledge base ID 1 " + 
-                    (exists ? "exists" : "does not exist"));
-        } catch (Exception e) {
-            printTestFailure("testExistsByAgentIdAndKnowledgeBaseId", e);
-        }
+    @Test
+    public void testExistsByAgentIdAndKnowledgeBaseId() throws SQLException {
+        // Check if an association exists
+        boolean exists = agentKnowledgeBaseDao.existsByAgentIdAndKnowledgeBaseId(1, 1);
+        
+        // Verify the association exists
+        assertTrue("Association between agent ID 1 and knowledge base ID 1 should exist", exists);
+        
+        // Check if a non-existent association exists
+        boolean notExists = agentKnowledgeBaseDao.existsByAgentIdAndKnowledgeBaseId(999, 999);
+        
+        // Verify the association does not exist
+        assertFalse("Association between agent ID 999 and knowledge base ID 999 should not exist", notExists);
     }
     
     /**
      * Test the deleteByAgentId method.
      */
-    private void testDeleteByAgentId() {
-        try {
-            // Create a new agent-knowledge base association
-            AgentKnowledgeBase agentKnowledgeBase = new AgentKnowledgeBase();
-            agentKnowledgeBase.setAgentId(3);
-            agentKnowledgeBase.setKnowledgeBaseId(3);
-            
-            AgentKnowledgeBase createdAgentKnowledgeBase = agentKnowledgeBaseDao.create(agentKnowledgeBase);
-            
-            // Delete associations by agent ID
-            int deleted = agentKnowledgeBaseDao.deleteByAgentId(3);
-            
-            // Verify the associations were deleted
-            boolean success = deleted > 0 && 
-                              !agentKnowledgeBaseDao.findById(createdAgentKnowledgeBase.getId()).isPresent();
-            
-            printTestResult("testDeleteByAgentId", success, "Deleted " + deleted + " associations");
-        } catch (Exception e) {
-            printTestFailure("testDeleteByAgentId", e);
-        }
+    @Test
+    public void testDeleteByAgentId() throws SQLException {
+        // Create a new agent-knowledge base association
+        AgentKnowledgeBase agentKnowledgeBase = new AgentKnowledgeBase();
+        agentKnowledgeBase.setAgentId(3);
+        agentKnowledgeBase.setKnowledgeBaseId(3);
+        
+        AgentKnowledgeBase createdAgentKnowledgeBase = agentKnowledgeBaseDao.create(agentKnowledgeBase);
+        
+        // Delete associations by agent ID
+        int deleted = agentKnowledgeBaseDao.deleteByAgentId(3);
+        
+        // Verify the associations were deleted
+        assertTrue("At least one association should be deleted", deleted > 0);
+        
+        Optional<AgentKnowledgeBase> foundAgentKnowledgeBase = agentKnowledgeBaseDao.findById(createdAgentKnowledgeBase.getId());
+        assertFalse("Association should not be found after deletion", foundAgentKnowledgeBase.isPresent());
     }
     
     /**
      * Test the deleteByKnowledgeBaseId method.
      */
-    private void testDeleteByKnowledgeBaseId() {
-        try {
-            // Create a new agent-knowledge base association
-            AgentKnowledgeBase agentKnowledgeBase = new AgentKnowledgeBase();
-            agentKnowledgeBase.setAgentId(3);
-            agentKnowledgeBase.setKnowledgeBaseId(3);
-            
-            AgentKnowledgeBase createdAgentKnowledgeBase = agentKnowledgeBaseDao.create(agentKnowledgeBase);
-            
-            // Delete associations by knowledge base ID
-            int deleted = agentKnowledgeBaseDao.deleteByKnowledgeBaseId(3);
-            
-            // Verify the associations were deleted
-            boolean success = deleted > 0 && 
-                              !agentKnowledgeBaseDao.findById(createdAgentKnowledgeBase.getId()).isPresent();
-            
-            printTestResult("testDeleteByKnowledgeBaseId", success, "Deleted " + deleted + " associations");
-        } catch (Exception e) {
-            printTestFailure("testDeleteByKnowledgeBaseId", e);
-        }
+    @Test
+    public void testDeleteByKnowledgeBaseId() throws SQLException {
+        // Create a new agent-knowledge base association
+        AgentKnowledgeBase agentKnowledgeBase = new AgentKnowledgeBase();
+        agentKnowledgeBase.setAgentId(3);
+        agentKnowledgeBase.setKnowledgeBaseId(3);
+        
+        AgentKnowledgeBase createdAgentKnowledgeBase = agentKnowledgeBaseDao.create(agentKnowledgeBase);
+        
+        // Delete associations by knowledge base ID
+        int deleted = agentKnowledgeBaseDao.deleteByKnowledgeBaseId(3);
+        
+        // Verify the associations were deleted
+        assertTrue("At least one association should be deleted", deleted > 0);
+        
+        Optional<AgentKnowledgeBase> foundAgentKnowledgeBase = agentKnowledgeBaseDao.findById(createdAgentKnowledgeBase.getId());
+        assertFalse("Association should not be found after deletion", foundAgentKnowledgeBase.isPresent());
     }
     
     /**
      * Test the deleteByAgentIdAndKnowledgeBaseId method.
      */
-    private void testDeleteByAgentIdAndKnowledgeBaseId() {
-        try {
-            // Create a new agent-knowledge base association
-            AgentKnowledgeBase agentKnowledgeBase = new AgentKnowledgeBase();
-            agentKnowledgeBase.setAgentId(3);
-            agentKnowledgeBase.setKnowledgeBaseId(3);
-            
-            AgentKnowledgeBase createdAgentKnowledgeBase = agentKnowledgeBaseDao.create(agentKnowledgeBase);
-            
-            // Delete the association by agent ID and knowledge base ID
-            boolean deleted = agentKnowledgeBaseDao.deleteByAgentIdAndKnowledgeBaseId(3, 3);
-            
-            // Verify the association was deleted
-            boolean success = deleted && 
-                              !agentKnowledgeBaseDao.findById(createdAgentKnowledgeBase.getId()).isPresent();
-            
-            printTestResult("testDeleteByAgentIdAndKnowledgeBaseId", success);
-        } catch (Exception e) {
-            printTestFailure("testDeleteByAgentIdAndKnowledgeBaseId", e);
-        }
+    @Test
+    public void testDeleteByAgentIdAndKnowledgeBaseId() throws SQLException {
+        // Create a new agent-knowledge base association
+        AgentKnowledgeBase agentKnowledgeBase = new AgentKnowledgeBase();
+        agentKnowledgeBase.setAgentId(3);
+        agentKnowledgeBase.setKnowledgeBaseId(3);
+        
+        AgentKnowledgeBase createdAgentKnowledgeBase = agentKnowledgeBaseDao.create(agentKnowledgeBase);
+        
+        // Delete the association by agent ID and knowledge base ID
+        boolean deleted = agentKnowledgeBaseDao.deleteByAgentIdAndKnowledgeBaseId(3, 3);
+        
+        // Verify the association was deleted
+        assertTrue("Association should be deleted successfully", deleted);
+        
+        Optional<AgentKnowledgeBase> foundAgentKnowledgeBase = agentKnowledgeBaseDao.findById(createdAgentKnowledgeBase.getId());
+        assertFalse("Association should not be found after deletion", foundAgentKnowledgeBase.isPresent());
     }
 }
