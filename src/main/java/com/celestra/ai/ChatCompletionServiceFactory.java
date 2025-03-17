@@ -2,6 +2,7 @@ package com.celestra.ai;
 
 import com.celestra.ai.claude.ClaudeChatCompletionService;
 import com.celestra.ai.config.AIConfigurationManager;
+import com.celestra.ai.http.DefaultHttpClientWrapper;
 import com.celestra.ai.openai.OpenAIChatCompletionService;
 
 /**
@@ -30,9 +31,9 @@ public class ChatCompletionServiceFactory {
      */
     public static ChatCompletionService getService(String serviceName) {
         if ("openai".equalsIgnoreCase(serviceName)) {
-            return new OpenAIChatCompletionService();
+            return getOpenAIService();
         } else if ("claude".equalsIgnoreCase(serviceName)) {
-            return new ClaudeChatCompletionService();
+            return getClaudeService();
         } else {
             throw new IllegalArgumentException("Unknown AI service: " + serviceName);
         }
@@ -44,7 +45,7 @@ public class ChatCompletionServiceFactory {
      * @return The OpenAI chat completion service
      */
     public static ChatCompletionService getOpenAIService() {
-        return new OpenAIChatCompletionService();
+        return new OpenAIChatCompletionService(AIConfigurationManager.getInstance(), new DefaultHttpClientWrapper());
     }
     
     /**
@@ -53,6 +54,6 @@ public class ChatCompletionServiceFactory {
      * @return The Claude chat completion service
      */
     public static ChatCompletionService getClaudeService() {
-        return new ClaudeChatCompletionService();
+        return new ClaudeChatCompletionService(AIConfigurationManager.getInstance(), new DefaultHttpClientWrapper());
     }
 }

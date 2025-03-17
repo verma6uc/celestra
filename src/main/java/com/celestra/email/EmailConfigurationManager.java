@@ -1,5 +1,6 @@
 package com.celestra.email;
 
+import com.celestra.email.config.EmailConfigProvider;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
@@ -10,7 +11,7 @@ import java.util.logging.Logger;
  * Configuration manager for email services.
  * Loads and provides access to email configuration properties.
  */
-public class EmailConfigurationManager {
+public class EmailConfigurationManager implements EmailConfigProvider {
     
     private static final Logger LOGGER = Logger.getLogger(EmailConfigurationManager.class.getName());
     private static final String CONFIG_FILE = "email-config.properties";

@@ -2,6 +2,8 @@ package com.celestra.ai.claude;
 
 import com.celestra.ai.ChatCompletionService;
 import com.celestra.ai.config.AIConfigurationManager;
+import com.celestra.ai.http.DefaultHttpClientWrapper;
+import com.celestra.ai.http.HttpClientWrapper;
 import com.celestra.ai.exception.AIServiceException;
 import com.celestra.ai.exception.AuthenticationException;
 import com.celestra.ai.exception.InvalidRequestException;
@@ -10,9 +12,7 @@ import com.celestra.ai.exception.ServerException;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,7 +37,7 @@ public class ClaudeChatCompletionService implements ChatCompletionService {
     private static final int DEFAULT_TIMEOUT_SECONDS = 60;
     
     private final AIConfigurationManager configManager;
-    private final HttpClient httpClient;
+    private final HttpClientWrapper httpClient;
     private final Gson gson;
     
     /**
@@ -45,9 +45,17 @@ public class ClaudeChatCompletionService implements ChatCompletionService {
      */
     public ClaudeChatCompletionService() {
         this.configManager = AIConfigurationManager.getInstance();
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(DEFAULT_TIMEOUT_SECONDS))
-                .build();
+        this.httpClient = new DefaultHttpClientWrapper(DEFAULT_TIMEOUT_SECONDS);
+        this.gson = new Gson();
+    }
+    
+    /**
+     * Create a new Claude chat completion service with a custom HTTP client wrapper.
+     * This constructor is primarily used for testing.
+     */
+    public ClaudeChatCompletionService(AIConfigurationManager configManager, HttpClientWrapper httpClient) {
+        this.configManager = configManager;
+        this.httpClient = httpClient;
         this.gson = new Gson();
     }
     
@@ -108,7 +116,7 @@ public class ClaudeChatCompletionService implements ChatCompletionService {
                     Thread.sleep(retryDelayMs * attempt); // Exponential backoff
                 }
                 
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                HttpClientWrapper.SimpleHttpResponse response = httpClient.sendRequest(request);
                 return handleResponse(response);
             } catch (RateLimitException e) {
                 LOGGER.warning("Rate limit exceeded: " + e.getMessage());
@@ -185,7 +193,7 @@ public class ClaudeChatCompletionService implements ChatCompletionService {
      * @return The generated text
      * @throws AIServiceException If an error occurs
      */
-    private String handleResponse(HttpResponse<String> response) throws AIServiceException {
+    private String handleResponse(HttpClientWrapper.SimpleHttpResponse response) throws AIServiceException {
         int statusCode = response.statusCode();
         String responseBody = response.body();
         
@@ -206,7 +214,7 @@ public class ClaudeChatCompletionService implements ChatCompletionService {
                 case 429:
                     // Extract retry-after header if available
                     long retryAfterMs = 0;
-                    String retryAfter = response.headers().firstValue("Retry-After").orElse(null);
+                    String retryAfter = response.headers().containsKey("Retry-After") ? response.headers().get("Retry-After").get(0) : null;
                     if (retryAfter != null) {
                         try {
                             retryAfterMs = Long.parseLong(retryAfter) * 1000; // Convert seconds to milliseconds

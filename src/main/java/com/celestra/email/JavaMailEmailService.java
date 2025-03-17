@@ -1,5 +1,6 @@
 package com.celestra.email;
 
+import com.celestra.email.config.EmailConfigProvider;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,14 +33,23 @@ public class JavaMailEmailService implements EmailService {
     
     private static final Logger LOGGER = Logger.getLogger(JavaMailEmailService.class.getName());
     
-    private final EmailConfigurationManager configManager;
+    private final EmailConfigProvider configProvider;
     private final Session session;
     
     /**
      * Create a new JavaMail email service.
      */
     public JavaMailEmailService() {
-        this.configManager = EmailConfigurationManager.getInstance();
+        this.configProvider = EmailConfigurationManager.getInstance();
+        this.session = createSession();
+    }
+    
+    /**
+     * Create a new JavaMail email service with a custom configuration provider.
+     * This constructor is primarily used for testing.
+     */
+    public JavaMailEmailService(EmailConfigProvider configProvider) {
+        this.configProvider = configProvider;
         this.session = createSession();
     }
     
@@ -49,15 +59,15 @@ public class JavaMailEmailService implements EmailService {
      * @return The JavaMail session
      */
     private Session createSession() {
-        Properties props = configManager.getJavaMailProperties();
+        Properties props = configProvider.getJavaMailProperties();
         
-        if (configManager.isSmtpAuthEnabled()) {
+        if (configProvider.isSmtpAuthEnabled()) {
             return Session.getInstance(props, new Authenticator() {
                 @Override
                 protected PasswordAuthentication getPasswordAuthentication() {
                     return new PasswordAuthentication(
-                            configManager.getSmtpUsername(), 
-                            configManager.getSmtpPassword());
+                            configProvider.getSmtpUsername(), 
+                            configProvider.getSmtpPassword());
                 }
             });
         } else {
@@ -122,7 +132,7 @@ public class JavaMailEmailService implements EmailService {
             MimeMessage message = createMimeMessage();
             
             // Set From
-            message.setFrom(new InternetAddress(configManager.getFromAddress(), configManager.getFromName()));
+            message.setFrom(new InternetAddress(configProvider.getFromAddress(), configProvider.getFromName()));
             
             // Set To
             for (String recipient : to) {
@@ -256,8 +266,8 @@ public class JavaMailEmailService implements EmailService {
      * @throws MessagingException If an error occurs while sending the email
      */
     private void sendWithRetry(MimeMessage message) throws MessagingException {
-        int maxRetries = configManager.getRetryAttempts();
-        int retryDelayMs = configManager.getRetryDelayMs();
+        int maxRetries = configProvider.getRetryAttempts();
+        int retryDelayMs = configProvider.getRetryDelayMs();
         
         MessagingException lastException = null;
         for (int attempt = 0; attempt <= maxRetries; attempt++) {
