@@ -38,7 +38,41 @@ public class AgentKnowledgeBaseDaoImplTest extends BaseDaoTest {
         // Clean up any existing test data
         cleanupTestData();
         
-        // Insert test data
+        // Insert test company
+        executeSQL("INSERT INTO companies (id, name, description, size, vertical, status, created_at, updated_at) " +
+                   "VALUES (1, 'Test Company 1', 'Test Company Description 1', 'SMALL'::company_size, 'TECH'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW())");
+        
+        // Insert test users
+        executeSQL("INSERT INTO users (id, company_id, role, email, name, password_hash, status, created_at, updated_at) " +
+                   "VALUES (1, 1, 'COMPANY_ADMIN'::user_role, 'admin@test.com', 'Admin User', 'hash123', 'ACTIVE'::user_status, NOW(), NOW())");
+        
+        executeSQL("INSERT INTO users (id, company_id, role, email, name, password_hash, status, created_at, updated_at) " +
+                   "VALUES (2, 1, 'COMPANY_ADMIN'::user_role, 'admin2@test.com', 'Admin User 2', 'hash456', 'ACTIVE'::user_status, NOW(), NOW())");
+        
+        executeSQL("INSERT INTO users (id, company_id, role, email, name, password_hash, status, created_at, updated_at) " +
+                   "VALUES (3, 1, 'COMPANY_ADMIN'::user_role, 'admin3@test.com', 'Admin User 3', 'hash789', 'ACTIVE'::user_status, NOW(), NOW())");
+        
+        // Insert test agents
+        executeSQL("INSERT INTO agents (id, company_id, name, description, status, created_at, updated_at) " +
+                   "VALUES (1, 1, 'Test Agent 1', 'Test Agent Description 1', 'ACTIVE'::agent_status, NOW(), NOW())");
+        
+        executeSQL("INSERT INTO agents (id, company_id, name, description, status, created_at, updated_at) " +
+                   "VALUES (2, 1, 'Test Agent 2', 'Test Agent Description 2', 'ACTIVE'::agent_status, NOW(), NOW())");
+        
+        executeSQL("INSERT INTO agents (id, company_id, name, description, status, created_at, updated_at) " +
+                   "VALUES (3, 1, 'Test Agent 3', 'Test Agent Description 3', 'ACTIVE'::agent_status, NOW(), NOW())");
+        
+        // Insert test knowledge bases
+        executeSQL("INSERT INTO knowledge_bases (id, company_id, name, description, status, created_at, updated_at) " +
+                   "VALUES (1, 1, 'Test KB 1', 'Test KB Description 1', 'ACTIVE'::knowledge_base_status, NOW(), NOW())");
+        
+        executeSQL("INSERT INTO knowledge_bases (id, company_id, name, description, status, created_at, updated_at) " +
+                   "VALUES (2, 1, 'Test KB 2', 'Test KB Description 2', 'ACTIVE'::knowledge_base_status, NOW(), NOW())");
+        
+        executeSQL("INSERT INTO knowledge_bases (id, company_id, name, description, status, created_at, updated_at) " +
+                   "VALUES (3, 1, 'Test KB 3', 'Test KB Description 3', 'ACTIVE'::knowledge_base_status, NOW(), NOW())");
+        
+        // Insert test agent-knowledge base associations
         executeSQL("INSERT INTO agent_knowledge_bases (agent_id, knowledge_base_id, created_at) " +
                    "VALUES (1, 1, NOW())");
         
@@ -52,6 +86,10 @@ public class AgentKnowledgeBaseDaoImplTest extends BaseDaoTest {
     @Override
     protected void cleanupTestData() throws SQLException {
         executeSQL("DELETE FROM agent_knowledge_bases WHERE agent_id IN (1, 2, 3) AND knowledge_base_id IN (1, 2, 3)");
+        executeSQL("DELETE FROM knowledge_bases WHERE id IN (1, 2, 3)");
+        executeSQL("DELETE FROM agents WHERE id IN (1, 2, 3)");
+        executeSQL("DELETE FROM users WHERE id IN (1, 2, 3)");
+        executeSQL("DELETE FROM companies WHERE id = 1");
     }
     
     /**
