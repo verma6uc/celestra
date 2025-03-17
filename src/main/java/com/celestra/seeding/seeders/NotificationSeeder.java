@@ -34,11 +34,11 @@ public class NotificationSeeder {
     // Notification status distribution (PENDING, DELIVERED, FAILED)
     private static final double[] NOTIFICATION_STATUS_DISTRIBUTION = {0.6, 0.3, 0.1};
     
-    // Notification priority distribution (LOW, MEDIUM, HIGH, URGENT)
+    // Notification priority distribution (LOW, MEDIUM, HIGH, CRITICAL)
     private static final double[] NOTIFICATION_PRIORITY_DISTRIBUTION = {0.4, 0.4, 0.15, 0.05};
     
-    // Notification delivery method distribution (EMAIL, IN_APP, SMS, PUSH)
-    private static final double[] NOTIFICATION_DELIVERY_METHOD_DISTRIBUTION = {0.4, 0.4, 0.1, 0.1};
+    // Notification delivery method distribution (IN_APP, EMAIL, SMS, WEBHOOK, PUSH)
+    private static final double[] NOTIFICATION_DELIVERY_METHOD_DISTRIBUTION = {0.3, 0.3, 0.1, 0.1, 0.2};
     
     private final Connection connection;
     private final NotificationDao notificationDao;
