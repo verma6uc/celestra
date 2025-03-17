@@ -29,10 +29,10 @@ public class NotificationSeeder {
     private static final Logger LOGGER = Logger.getLogger(NotificationSeeder.class.getName());
     
     // Notification type distribution
-    private static final double[] NOTIFICATION_TYPE_DISTRIBUTION = {0.3, 0.2, 0.15, 0.1, 0.1, 0.15};
+    private static final double[] NOTIFICATION_TYPE_DISTRIBUTION = {0.1, 0.05, 0.05, 0.1, 0.05, 0.1, 0.1, 0.1, 0.1, 0.05, 0.1, 0.1};
     
-    // Notification status distribution (UNREAD, READ, DISMISSED)
-    private static final double[] NOTIFICATION_STATUS_DISTRIBUTION = {0.6, 0.3, 0.1}; // PENDING, DELIVERED, FAILED
+    // Notification status distribution (PENDING, DELIVERED, FAILED)
+    private static final double[] NOTIFICATION_STATUS_DISTRIBUTION = {0.6, 0.3, 0.1};
     
     // Notification priority distribution (LOW, MEDIUM, HIGH, URGENT)
     private static final double[] NOTIFICATION_PRIORITY_DISTRIBUTION = {0.4, 0.4, 0.15, 0.05};
@@ -80,11 +80,7 @@ public class NotificationSeeder {
         
         try {
             // Normalize the distribution weights
-            double[] notificationTypeWeights = new double[NotificationType.values().length];
-            for (int i = 0; i < Math.min(notificationTypeWeights.length, NOTIFICATION_TYPE_DISTRIBUTION.length); i++) {
-                notificationTypeWeights[i] = NOTIFICATION_TYPE_DISTRIBUTION[i];
-            }
-            
+            double[] notificationTypeWeights = EnumUtil.createNormalizedWeights(NotificationType.class, NOTIFICATION_TYPE_DISTRIBUTION);
             double[] notificationStatusWeights = EnumUtil.createNormalizedWeights(NotificationStatus.class, NOTIFICATION_STATUS_DISTRIBUTION);
             double[] notificationPriorityWeights = EnumUtil.createNormalizedWeights(NotificationPriority.class, NOTIFICATION_PRIORITY_DISTRIBUTION);
             double[] notificationDeliveryMethodWeights = EnumUtil.createNormalizedWeights(NotificationDeliveryMethod.class, NOTIFICATION_DELIVERY_METHOD_DISTRIBUTION);
