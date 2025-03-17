@@ -183,7 +183,7 @@ public class AgentSeeder {
                     }
                     
                     // Generate timestamps
-                    Timestamp[] timestamps = TimestampUtil.getCreatedUpdatedTimestamps(365, 30, 1440);
+                    Timestamp[] timestamps = TimestampUtil.getCreatedUpdatedTimestamps(30, 365, 1440);
                     Timestamp createdAt = timestamps[0];
                     Timestamp updatedAt = timestamps[1];
                     

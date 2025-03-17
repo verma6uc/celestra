@@ -215,7 +215,7 @@ public class KnowledgeSourceSeeder {
                     knowledgeSource.setName(sourceName);
                     
                     // Generate timestamps
-                    Timestamp[] timestamps = TimestampUtil.getCreatedUpdatedTimestamps(365, 30, 1440);
+                    Timestamp[] timestamps = TimestampUtil.getCreatedUpdatedTimestamps(30, 365, 1440);
                     knowledgeSource.setCreatedAt(timestamps[0]);
                     knowledgeSource.setUpdatedAt(timestamps[1]);
                     
