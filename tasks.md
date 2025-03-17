@@ -1,72 +1,95 @@
-# Java Servlet Project Tasks
+# Data Seeding Tasks
 
-## Database Structure and Model Setup
+## Analysis and Planning
 
-- [x] **Analyze schema.sql file in the docs/db directory**
-  - **Why**: Understanding the database schema is crucial before creating any models to ensure correct representation of data structures and relationships.
-  - **What**: Review the SQL file at `/Users/nupurbhaisare/celestra-workspace/celestra/docs/db/schema.sql` to identify all tables, relationships, data types, and constraints.
+- [x] **Analyze database schema structure**
+  - **Why**: Understanding the schema structure is essential for creating a proper seeding plan that respects table relationships and constraints.
+  - **What**: Carefully review the SQL file at `/Users/nupurbhaisare/celestra-workspace/celestra/docs/db/schema.sql` to:
+    - Identify all tables and their relationships
+    - Note primary and foreign key constraints
+    - Understand data types and constraints for each column
+    - Identify required vs. optional fields
+    - Document enum values and their constraints
 
-- [x] **Create enum classes in the enums package**
-  - **Why**: Enums provide type-safety for fixed sets of values in the database (like status types, categories, etc.).
-  - **What**: For each enumerated type defined in the schema file, create a corresponding Java enum class in the enums package. Each enum should accurately represent the possible values from the schema.
+- [ ] **Review application features to understand data requirements**
+  - **Why**: The seeded data should support the application features and use cases to enable effective testing and demonstration.
+  - **What**: Read the feature documentation in `/Users/nupurbhaisare/celestra-workspace/celestra/docs/features` to:
+    - Understand how each table is used in the application
+    - Identify important data patterns and business rules
+    - Note any specific data requirements for testing key features
+    - Understand the expected volume and variety of data needed
 
-- [x] **Create POJO (Plain Old Java Object) classes in the model package**
-  - **Why**: POJOs represent database tables as Java objects, allowing for object-oriented manipulation of database data.
-  - **What**: Create a Java class for each table in the schema. Each class should have:
-    - Private fields corresponding to table columns with appropriate data types
-    - Getters and setters for each field
-    - Constructors (default and parameterized)
-    - toString(), equals(), and hashCode() methods
+- [ ] **Create comprehensive data seeding plan**
+  - **Why**: A detailed plan ensures data is inserted in the correct order, with appropriate relationships, and in a way that supports application features.
+  - **What**: Develop a seeding plan document that includes:
+    - Tables listed in insertion order (respecting foreign key constraints)
+    - Volume of data to insert for each table
+    - Specific Faker methods to use for each column type
+    - Strategy for generating related records across tables
+    - Handling of enum values and other constrained fields
+    - Approach for generating realistic data patterns that support features
+    - Special cases or custom data generation requirements
 
-- [x] **Verify completeness of enums and POJOs**
-  - **Why**: Ensure all database entities are properly represented in the Java model before proceeding.
-  - **What**: Cross-check the created enum and POJO classes against the schema.sql file to confirm that all tables, columns, relationships, and enum values have been properly implemented.
+## Implementation
 
-## Database Connection Setup
+- [ ] **Set up seeding utilities**
+  - **Why**: Helper utilities will make the seeding process more consistent and efficient.
+  - **What**: Implement utility methods that:
+    - Leverage the existing database connection
+    - Provide helper methods for batch insertions
+    - Configure and initialize the Faker library
+    - Include error handling and logging for seeding operations
 
-- [x] **Create application.properties file**
-  - **Why**: Externalize database configuration for easier maintenance and deployment across different environments.
-  - **What**: Create a properties file that includes:
-    - Database URL
-    - Username and password
-    - Connection pool settings
-    - Any other database-specific parameters
+- [ ] **Implement seeding classes for independent tables**
+  - **Why**: Tables without foreign key dependencies should be seeded first.
+  - **What**: Create Java classes that:
+    - Generate appropriate fake data using Faker
+    - Handle any table-specific constraints or business rules
+    - Perform bulk inserts for efficiency
+    - Include progress reporting and error handling
 
-- [x] **Implement Database Utility class**
-  - **Why**: Centralize database connection management to avoid code duplication and ensure consistent handling of connections.
-  - **What**: Create a utility class that:
-    - Loads configuration from application.properties
-    - Provides methods to obtain and release database connections
-    - Implements connection pooling for better performance
-    - Includes error handling for database connection issues
+- [ ] **Implement seeding classes for dependent tables**
+  - **Why**: Tables with foreign key dependencies must be seeded after their parent tables.
+  - **What**: Create Java classes that:
+    - Query for existing IDs from parent tables
+    - Generate appropriate fake data with valid relationships
+    - Handle complex relationship patterns (one-to-many, many-to-many)
+    - Perform bulk inserts while maintaining referential integrity
+    - Include progress reporting and error handling
 
-## Data Access Layer Implementation
+- [ ] **Create master seeding coordinator class**
+  - **Why**: A coordinator ensures tables are seeded in the correct order and provides a unified interface for the seeding process.
+  - **What**: Implement a coordinator class that:
+    - Executes individual seeding classes in the proper sequence
+    - Handles dependencies between seeding operations
+    - Provides overall progress reporting
+    - Includes transaction management for data consistency
+    - Offers options for full or partial seeding
 
-- [x] **Review feature requirements**
-  - **Why**: Understanding the required features is essential before implementing data access objects.
-  - **What**: Read and analyze the documents in `/Users/nupurbhaisare/celestra-workspace/celestra/docs/features` to understand what operations each DAO needs to support.
+## Execution and Verification
 
-- [x] **Create DAO (Data Access Object) classes for each POJO**
-  - **Why**: DAOs separate business logic from database access code, providing a clean API for database operations.
-  - **What**: For each POJO, create a corresponding DAO class that:
-    - Implements CRUD operations (Create, Read, Update, Delete)
-    - Includes any specialized queries needed for the features
-    - Uses prepared statements to prevent SQL injection
-    - Properly handles resources (connections, statements, result sets)
-    - Implements transaction management where needed
-    - Ensures proper handling of enum values by correctly casting between Java enum types and database representations (string or integer values) in both query parameters and result processing; this includes converting Java enum values to the appropriate database type when setting parameters, casting database values back to corresponding Java enum types when retrieving results, and handling potential null or invalid enum values
+- [ ] **Execute seeding process for each table**
+  - **Why**: Seeding tables one by one allows for better control and troubleshooting.
+  - **What**: Run each seeding class individually:
+    - Start with independent tables
+    - Proceed to dependent tables in the correct order
+    - Monitor for errors or constraint violations
+    - Verify data volume meets requirements
 
-- [x] **Verify completeness of DAO classes**
-  - **Why**: Ensure all required database operations are implemented before testing.
-  - **What**: Review each DAO implementation against the feature requirements to confirm all necessary operations are supported and enum values are properly handled.
+- [ ] **Troubleshoot and fix any seeding issues**
+  - **Why**: Error handling ensures data integrity and complete seeding.
+  - **What**: For any errors encountered:
+    - Analyze error messages and stack traces
+    - Review database constraints that might be violated
+    - Fix data generation logic to comply with constraints
+    - Adjust seeding approach for problematic tables
+    - Re-run failed seeding operations
 
-## Testing
-
-- [x] **Create JUnit test classes for each DAO**
-  - **Why**: Verify that each DAO correctly implements the required operations and interacts properly with the database.
-  - **What**: For each DAO, create a JUnit test class in the test package that:
-    - Includes test cases for all DAO methods
-    - Sets up test data
-    - Executes each method and verifies results using assertions
-    - Tests enum value conversions to ensure they work correctly in both directions
-    - Cleans up test data to avoid affecting other tests
+- [ ] **Verify seeded data meets application requirements**
+  - **Why**: Confirmation that the seeded data will support application testing and demonstrations.
+  - **What**: Perform validation checks:
+    - Query key tables to verify record counts
+    - Sample data to ensure it appears realistic
+    - Test important relationships between tables
+    - Verify that seeded data supports critical application features
+    - Confirm data volumes are appropriate for testing
