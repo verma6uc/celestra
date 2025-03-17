@@ -51,7 +51,7 @@
     - Password history checking to prevent reuse
     - Password strength evaluation
 
-- [ ] **Implement Login Service**
+- [x] **Implement Login Service**
   - **Why**: Centralizing login logic ensures consistent security policies.
   - **What**: Create a login service that:
     - Validates credentials
