@@ -3,6 +3,8 @@ package com.celestra.dao.impl;
 import static org.junit.Assert.*;
 
 import java.sql.SQLException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
@@ -17,6 +19,7 @@ import com.celestra.enums.InvitationStatus;
 import com.celestra.enums.UserRole;
 import com.celestra.enums.UserStatus;
 import com.celestra.model.Invitation;
+import com.celestra.db.DatabaseUtil;
 
 /**
  * Test class for InvitationDaoImpl.
@@ -44,32 +47,32 @@ public class InvitationDaoImplTest extends BaseDaoTest {
         cleanupTestData();
         
         // Insert test companies first (to satisfy foreign key constraints)
-        executeSQL("INSERT INTO companies (id, name, description, size, vertical, status, created_at, updated_at) " +
-                   "VALUES (1, 'Test Company 1', 'Test Company Description 1', 'SMALL'::company_size, 'TECH'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW())");
+        executeSQL("INSERT INTO companies (name, description, size, vertical, status, created_at, updated_at) " +
+                   "VALUES ('Test Company 1', 'Test Company Description 1', 'SMALL'::company_size, 'TECH'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW()) RETURNING id");
         
         // Insert test users (to satisfy foreign key constraints)
-        executeSQL("INSERT INTO users (id, company_id, role, email, name, password_hash, status, created_at, updated_at) " +
-                   "VALUES (1, 1, 'COMPANY_ADMIN'::user_role, 'admin@test.com', 'Admin User', 'hash123', 'ACTIVE'::user_status, NOW(), NOW())");
+        executeSQL("INSERT INTO users (company_id, role, email, name, password_hash, status, created_at, updated_at) " +
+                   "VALUES ((SELECT id FROM companies WHERE name = 'Test Company 1'), 'COMPANY_ADMIN'::user_role, 'admin@test.com', 'Admin User', 'hash123', 'ACTIVE'::user_status, NOW(), NOW()) RETURNING id");
         
-        executeSQL("INSERT INTO users (id, company_id, role, email, name, password_hash, status, created_at, updated_at) " +
-                   "VALUES (2, 1, 'REGULAR_USER'::user_role, 'user@test.com', 'Regular User', 'hash456', 'ACTIVE'::user_status, NOW(), NOW())");
+        executeSQL("INSERT INTO users (company_id, role, email, name, password_hash, status, created_at, updated_at) " +
+                   "VALUES ((SELECT id FROM companies WHERE name = 'Test Company 1'), 'REGULAR_USER'::user_role, 'user@test.com', 'Regular User', 'hash456', 'ACTIVE'::user_status, NOW(), NOW()) RETURNING id");
         
         // Insert test invitations with nextval for id to avoid conflicts
         executeSQL("INSERT INTO invitations (id, user_id, token, status, sent_at, expires_at, resend_count, created_at, updated_at) " +
-                   "VALUES (nextval('invitations_id_seq'), 1, 'token123', 'PENDING'::invitation_status, NULL, NOW() + INTERVAL '7 days', 0, NOW(), NOW())");
+                   "VALUES (nextval('invitations_id_seq'), (SELECT id FROM users WHERE email = 'admin@test.com'), 'token123', 'PENDING'::invitation_status, NULL, NOW() + INTERVAL '7 days', 0, NOW(), NOW())");
         
         executeSQL("INSERT INTO invitations (id, user_id, token, status, sent_at, expires_at, resend_count, created_at, updated_at) " +
-                   "VALUES (nextval('invitations_id_seq'), 2, 'token456', 'SENT'::invitation_status, NOW(), NOW() + INTERVAL '7 days', 1, NOW(), NOW())");
+                   "VALUES (nextval('invitations_id_seq'), (SELECT id FROM users WHERE email = 'user@test.com'), 'token456', 'SENT'::invitation_status, NOW(), NOW() + INTERVAL '7 days', 1, NOW(), NOW())");
         
         executeSQL("INSERT INTO invitations (id, user_id, token, status, sent_at, expires_at, resend_count, created_at, updated_at) " +
-                   "VALUES (nextval('invitations_id_seq'), 1, 'token789', 'EXPIRED'::invitation_status, NOW() - INTERVAL '14 days', NOW() - INTERVAL '7 days', 2, NOW(), NOW())");
+                   "VALUES (nextval('invitations_id_seq'), (SELECT id FROM users WHERE email = 'admin@test.com'), 'token789', 'EXPIRED'::invitation_status, NOW() - INTERVAL '14 days', NOW() - INTERVAL '7 days', 2, NOW(), NOW())");
     }
 
     @Override
     protected void cleanupTestData() throws SQLException {
         executeSQL("DELETE FROM invitations WHERE token LIKE 'token%' OR token LIKE 'test%'");
-        executeSQL("DELETE FROM users WHERE id IN (1, 2)");
-        executeSQL("DELETE FROM companies WHERE id = 1");
+        executeSQL("DELETE FROM users WHERE email IN ('admin@test.com', 'user@test.com')");
+        executeSQL("DELETE FROM companies WHERE name = 'Test Company 1'");
     }
     
     /**
@@ -79,7 +82,7 @@ public class InvitationDaoImplTest extends BaseDaoTest {
     public void testCreate() throws SQLException {
         // Create a new invitation
         Invitation invitation = new Invitation();
-        invitation.setUserId(1);
+        invitation.setUserId(getUserId("admin@test.com"));
         invitation.setToken("test-token-" + UUID.randomUUID().toString());
         invitation.setStatus(InvitationStatus.PENDING);
         invitation.setResendCount(0);
@@ -137,7 +140,7 @@ public class InvitationDaoImplTest extends BaseDaoTest {
     public void testUpdate() throws SQLException {
         // Create a new invitation
         Invitation invitation = new Invitation();
-        invitation.setUserId(1);
+        invitation.setUserId(getUserId("admin@test.com"));
         invitation.setToken("test-token-update-" + UUID.randomUUID().toString());
         invitation.setStatus(InvitationStatus.PENDING);
         invitation.setResendCount(0);
@@ -169,7 +172,7 @@ public class InvitationDaoImplTest extends BaseDaoTest {
     public void testDelete() throws SQLException {
         // Create a new invitation
         Invitation invitation = new Invitation();
-        invitation.setUserId(1);
+        invitation.setUserId(getUserId("admin@test.com"));
         invitation.setToken("test-token-delete-" + UUID.randomUUID().toString());
         invitation.setStatus(InvitationStatus.PENDING);
         invitation.setResendCount(0);
@@ -192,14 +195,14 @@ public class InvitationDaoImplTest extends BaseDaoTest {
     @Test
     public void testFindByUserId() throws SQLException {
         // Find invitations by user ID
-        List<Invitation> invitations = invitationDao.findByUserId(1);
+        List<Invitation> invitations = invitationDao.findByUserId(getUserId("admin@test.com"));
         
         // Verify there are invitations
-        assertFalse("There should be invitations for user ID 1", invitations.isEmpty());
+        assertFalse("There should be invitations for admin user", invitations.isEmpty());
         
         // Verify all entries have the correct user ID
         for (Invitation invitation : invitations) {
-            assertEquals("Invitation user ID should be 1", Integer.valueOf(1), invitation.getUserId());
+            assertEquals("Invitation user ID should match admin user", getUserId("admin@test.com"), invitation.getUserId());
         }
     }
     
@@ -240,7 +243,7 @@ public class InvitationDaoImplTest extends BaseDaoTest {
     public void testFindExpired() throws SQLException {
         // Create a new invitation that is expired
         Invitation invitation = new Invitation();
-        invitation.setUserId(1);
+        invitation.setUserId(getUserId("admin@test.com"));
         invitation.setToken("test-token-expired-" + UUID.randomUUID().toString());
         invitation.setStatus(InvitationStatus.SENT);
         // Set sent date to 14 days ago
@@ -269,7 +272,7 @@ public class InvitationDaoImplTest extends BaseDaoTest {
     public void testUpdateStatus() throws SQLException {
         // Create a new invitation
         Invitation invitation = new Invitation();
-        invitation.setUserId(1);
+        invitation.setUserId(getUserId("admin@test.com"));
         invitation.setToken("test-token-status-" + UUID.randomUUID().toString());
         invitation.setStatus(InvitationStatus.PENDING);
         invitation.setResendCount(0);
@@ -298,7 +301,7 @@ public class InvitationDaoImplTest extends BaseDaoTest {
     public void testIncrementResendCount() throws SQLException {
         // Create a new invitation
         Invitation invitation = new Invitation();
-        invitation.setUserId(1);
+        invitation.setUserId(getUserId("admin@test.com"));
         invitation.setToken("test-token-resend-" + UUID.randomUUID().toString());
         invitation.setStatus(InvitationStatus.PENDING);
         invitation.setResendCount(0);
@@ -318,5 +321,21 @@ public class InvitationDaoImplTest extends BaseDaoTest {
         // Clean up
         boolean deleted = invitationDao.delete(createdInvitation.getId());
         assertTrue("Invitation should be deleted successfully", deleted);
+    }
+    
+    /**
+     * Helper method to get the ID of a user by email.
+     * 
+     * @param email The email of the user
+     * @return The ID of the user
+     * @throws SQLException if a database error occurs
+     */
+    private Integer getUserId(String email) throws SQLException {
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT id FROM users WHERE email = ?")) {
+            ps.setString(1, email);
+            var rs = ps.executeQuery();
+            return rs.next() ? rs.getInt("id") : null;
+        }
     }
 }

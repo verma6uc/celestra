@@ -3,6 +3,8 @@ package com.celestra.dao.impl;
 import static org.junit.Assert.*;
 
 import java.sql.SQLException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
@@ -13,6 +15,7 @@ import org.junit.Test;
 import com.celestra.dao.BaseDaoTest;
 import com.celestra.dao.FailedLoginDao;
 import com.celestra.model.FailedLogin;
+import com.celestra.db.DatabaseUtil;
 
 /**
  * Test class for FailedLoginDaoImpl.
@@ -40,18 +43,18 @@ public class FailedLoginDaoImplTest extends BaseDaoTest {
         cleanupTestData();
         
         // First insert test company to satisfy foreign key constraints
-        executeSQL("INSERT INTO companies (id, name, description, size, vertical, status, created_at, updated_at) " +
-                   "VALUES (1, 'Test Company 1', 'Test Company Description 1', 'SMALL'::company_size, 'TECH'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW())");
+        executeSQL("INSERT INTO companies (name, description, size, vertical, status, created_at, updated_at) " +
+                   "VALUES ('Test Company 1', 'Test Company Description 1', 'SMALL'::company_size, 'TECH'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW()) RETURNING id");
         
         // Insert test user
-        executeSQL("INSERT INTO users (id, company_id, role, email, name, password_hash, status, created_at, updated_at) " +
-                   "VALUES (999, 1, 'REGULAR_USER'::user_role, 'testuser@test.com', 'Test User', 'hash123', 'ACTIVE'::user_status, NOW(), NOW())");
+        executeSQL("INSERT INTO users (company_id, role, email, name, password_hash, status, created_at, updated_at) " +
+                   "VALUES ((SELECT id FROM companies WHERE name = 'Test Company 1'), 'REGULAR_USER'::user_role, 'testuser@test.com', 'Test User', 'hash123', 'ACTIVE'::user_status, NOW(), NOW()) RETURNING id");
         
         executeSQL("INSERT INTO failed_logins (user_id, ip_address, attempted_at, failure_reason) " +
-                   "VALUES (999, '192.168.1.1', NOW(), 'Invalid password')");
+                   "VALUES ((SELECT id FROM users WHERE email = 'testuser@test.com'), '192.168.1.1', NOW(), 'Invalid password')");
         
         executeSQL("INSERT INTO failed_logins (user_id, ip_address, attempted_at, failure_reason) " +
-                   "VALUES (999, '192.168.1.2', NOW(), 'Account locked')");
+                   "VALUES ((SELECT id FROM users WHERE email = 'testuser@test.com'), '192.168.1.2', NOW(), 'Account locked')");
         
         executeSQL("INSERT INTO failed_logins (ip_address, attempted_at, failure_reason) " +
                    "VALUES ('192.168.1.3', NOW(), 'User not found')");
@@ -61,7 +64,7 @@ public class FailedLoginDaoImplTest extends BaseDaoTest {
     protected void cleanupTestData() throws SQLException {
         executeSQL("DELETE FROM failed_logins WHERE ip_address LIKE '192.168.1.%'");
         executeSQL("DELETE FROM users WHERE email = 'testuser@test.com'");
-        executeSQL("DELETE FROM companies WHERE id = 1");
+        executeSQL("DELETE FROM companies WHERE name = 'Test Company 1'");
     }
     
     /**
@@ -269,5 +272,21 @@ public class FailedLoginDaoImplTest extends BaseDaoTest {
         
         Optional<FailedLogin> foundFailedLogin = failedLoginDao.findById(createdFailedLogin.getId());
         assertFalse("Old failed login should not be found after deletion", foundFailedLogin.isPresent());
+    }
+    
+    /**
+     * Helper method to get the ID of a user by email.
+     * 
+     * @param email The email of the user
+     * @return The ID of the user
+     * @throws SQLException if a database error occurs
+     */
+    private Integer getUserId(String email) throws SQLException {
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT id FROM users WHERE email = ?")) {
+            ps.setString(1, email);
+            var rs = ps.executeQuery();
+            return rs.next() ? rs.getInt("id") : null;
+        }
     }
 }
