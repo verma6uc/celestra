@@ -3,6 +3,8 @@ package com.celestra.dao.impl;
 import static org.junit.Assert.*;
 
 import java.sql.SQLException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -14,6 +16,7 @@ import com.celestra.dao.AuditLogDao;
 import com.celestra.dao.BaseDaoTest;
 import com.celestra.enums.AuditEventType;
 import com.celestra.model.AuditLog;
+import com.celestra.db.DatabaseUtil;
 
 /**
  * Test class for AuditLogDaoImpl.
@@ -41,15 +44,15 @@ public class AuditLogDaoImplTest extends BaseDaoTest {
         cleanupTestData();
         
         // Insert test companies first (to satisfy foreign key constraints)
-        executeSQL("INSERT INTO companies (id, name, description, size, vertical, status, created_at, updated_at) " +
-                   "VALUES (1, 'Test Company 1', 'Test Company Description 1', 'SMALL'::company_size, 'TECH'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW())");
+        executeSQL("INSERT INTO companies (name, description, size, vertical, status, created_at, updated_at) " +
+                   "VALUES ('Test Company 1', 'Test Company Description 1', 'SMALL'::company_size, 'TECH'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW()) RETURNING id");
         
         // Insert test users (to satisfy foreign key constraints)
-        executeSQL("INSERT INTO users (id, company_id, role, email, name, password_hash, status, created_at, updated_at) " +
-                   "VALUES (1, 1, 'COMPANY_ADMIN'::user_role, 'admin@test.com', 'Admin User', 'hash123', 'ACTIVE'::user_status, NOW(), NOW())");
+        executeSQL("INSERT INTO users (company_id, role, email, name, password_hash, status, created_at, updated_at) " +
+                   "VALUES ((SELECT id FROM companies WHERE name = 'Test Company 1'), 'COMPANY_ADMIN'::user_role, 'admin@test.com', 'Admin User', 'hash123', 'ACTIVE'::user_status, NOW(), NOW()) RETURNING id");
         
-        executeSQL("INSERT INTO users (id, company_id, role, email, name, password_hash, status, created_at, updated_at) " +
-                   "VALUES (2, 1, 'REGULAR_USER'::user_role, 'user@test.com', 'Regular User', 'hash456', 'ACTIVE'::user_status, NOW(), NOW())");
+        executeSQL("INSERT INTO users (company_id, role, email, name, password_hash, status, created_at, updated_at) " +
+                   "VALUES ((SELECT id FROM companies WHERE name = 'Test Company 1'), 'REGULAR_USER'::user_role, 'user@test.com', 'Regular User', 'hash456', 'ACTIVE'::user_status, NOW(), NOW()) RETURNING id");
         
         // Generate a group ID for testing
         String groupId = UUID.randomUUID().toString();
@@ -57,15 +60,15 @@ public class AuditLogDaoImplTest extends BaseDaoTest {
         // Insert test audit logs
         executeSQL("INSERT INTO audit_logs (user_id, event_type, event_description, ip_address, " +
                    "table_name, record_id, group_id, created_at) " +
-                   "VALUES (1, 'SUCCESSFUL_LOGIN'::audit_event_type, 'User login', '127.0.0.1', 'users', '1', '" + groupId + "', NOW())");
+                   "VALUES ((SELECT id FROM users WHERE email = 'admin@test.com'), 'SUCCESSFUL_LOGIN'::audit_event_type, 'User login', '127.0.0.1', 'users', '1', '" + groupId + "', NOW())");
         
         executeSQL("INSERT INTO audit_logs (user_id, event_type, event_description, ip_address, " +
                    "table_name, record_id, group_id, created_at) " +
-                   "VALUES (1, 'CONFIGURATION_UPDATE'::audit_event_type, 'User profile updated', '127.0.0.1', 'users', '1', '" + groupId + "', NOW())");
+                   "VALUES ((SELECT id FROM users WHERE email = 'admin@test.com'), 'CONFIGURATION_UPDATE'::audit_event_type, 'User profile updated', '127.0.0.1', 'users', '1', '" + groupId + "', NOW())");
         
         executeSQL("INSERT INTO audit_logs (user_id, event_type, event_description, ip_address, " +
                    "table_name, record_id, group_id, created_at) " +
-                   "VALUES (2, 'OTHER'::audit_event_type, 'Knowledge base created', '192.168.1.1', 'knowledge_bases', '1', '" + 
+                   "VALUES ((SELECT id FROM users WHERE email = 'user@test.com'), 'OTHER'::audit_event_type, 'Knowledge base created', '192.168.1.1', 'knowledge_bases', '1', '" + 
                    UUID.randomUUID().toString() + "', NOW())");
     }
     
@@ -75,8 +78,8 @@ public class AuditLogDaoImplTest extends BaseDaoTest {
                    "event_description LIKE 'User profile updated' OR " +
                    "event_description LIKE 'Knowledge base created' OR " +
                    "event_description LIKE 'Test%'");
-        executeSQL("DELETE FROM users WHERE id IN (1, 2)");
-        executeSQL("DELETE FROM companies WHERE id = 1");
+        executeSQL("DELETE FROM users WHERE email IN ('admin@test.com', 'user@test.com')");
+        executeSQL("DELETE FROM companies WHERE name = 'Test Company 1'");
     }
     
     /**
@@ -86,7 +89,7 @@ public class AuditLogDaoImplTest extends BaseDaoTest {
     public void testCreate() throws SQLException {
         // Create a new audit log
         AuditLog auditLog = new AuditLog();
-        auditLog.setUserId(1);
+        auditLog.setUserId(getUserId("admin@test.com"));
         auditLog.setEventType(AuditEventType.OTHER);
         auditLog.setEventDescription("Test audit log");
         auditLog.setIpAddress("127.0.0.1");
@@ -147,7 +150,7 @@ public class AuditLogDaoImplTest extends BaseDaoTest {
     public void testUpdate() throws SQLException {
         // Create a new audit log
         AuditLog auditLog = new AuditLog();
-        auditLog.setUserId(1);
+        auditLog.setUserId(getUserId("admin@test.com"));
         auditLog.setEventType(AuditEventType.OTHER);
         auditLog.setEventDescription("Test audit log update");
         auditLog.setIpAddress("127.0.0.1");
@@ -179,7 +182,7 @@ public class AuditLogDaoImplTest extends BaseDaoTest {
     public void testDelete() throws SQLException {
         // Create a new audit log
         AuditLog auditLog = new AuditLog();
-        auditLog.setUserId(1);
+        auditLog.setUserId(getUserId("admin@test.com"));
         auditLog.setEventType(AuditEventType.OTHER);
         auditLog.setEventDescription("Test audit log delete");
         auditLog.setIpAddress("127.0.0.1");
@@ -205,14 +208,14 @@ public class AuditLogDaoImplTest extends BaseDaoTest {
     @Test
     public void testFindByUserId() throws SQLException {
         // Find audit logs by user ID
-        List<AuditLog> auditLogs = auditLogDao.findByUserId(1);
+        List<AuditLog> auditLogs = auditLogDao.findByUserId(getUserId("admin@test.com"));
         
         // Verify there are audit logs
-        assertFalse("There should be audit logs for user ID 1", auditLogs.isEmpty());
+        assertFalse("There should be audit logs for admin user", auditLogs.isEmpty());
         
         // Verify all entries have the correct user ID
         for (AuditLog auditLog : auditLogs) {
-            assertEquals("Audit log user ID should be 1", Integer.valueOf(1), auditLog.getUserId());
+            assertEquals("Audit log user ID should match admin user", getUserId("admin@test.com"), auditLog.getUserId());
         }
     }
     
@@ -316,14 +319,14 @@ public class AuditLogDaoImplTest extends BaseDaoTest {
     @Test
     public void testFindByUserIdAndEventType() throws SQLException {
         // Find audit logs by user ID and event type
-        List<AuditLog> auditLogs = auditLogDao.findByUserIdAndEventType(1, AuditEventType.SUCCESSFUL_LOGIN);
+        List<AuditLog> auditLogs = auditLogDao.findByUserIdAndEventType(getUserId("admin@test.com"), AuditEventType.SUCCESSFUL_LOGIN);
         
         // Verify there are audit logs
-        assertFalse("There should be audit logs for user ID 1 and event type SUCCESSFUL_LOGIN", auditLogs.isEmpty());
+        assertFalse("There should be audit logs for admin user and event type SUCCESSFUL_LOGIN", auditLogs.isEmpty());
         
         // Verify all entries have the correct user ID and event type
         for (AuditLog auditLog : auditLogs) {
-            assertEquals("Audit log user ID should be 1", Integer.valueOf(1), auditLog.getUserId());
+            assertEquals("Audit log user ID should match admin user", getUserId("admin@test.com"), auditLog.getUserId());
             assertEquals("Audit log event type should be SUCCESSFUL_LOGIN", AuditEventType.SUCCESSFUL_LOGIN, auditLog.getEventType());
         }
     }
@@ -343,6 +346,22 @@ public class AuditLogDaoImplTest extends BaseDaoTest {
         for (AuditLog auditLog : auditLogs) {
             assertEquals("Audit log table name should be 'users'", "users", auditLog.getTableName());
             assertEquals("Audit log record ID should be '1'", "1", auditLog.getRecordId());
+        }
+    }
+    
+    /**
+     * Helper method to get the ID of a user by email.
+     * 
+     * @param email The email of the user
+     * @return The ID of the user
+     * @throws SQLException if a database error occurs
+     */
+    private Integer getUserId(String email) throws SQLException {
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT id FROM users WHERE email = ?")) {
+            ps.setString(1, email);
+            var rs = ps.executeQuery();
+            return rs.next() ? rs.getInt("id") : null;
         }
     }
 }
