@@ -39,20 +39,31 @@ public class AgentDaoImplTest extends BaseDaoTest {
         // Clean up any existing test data
         cleanupTestData();
         
-        // Insert test data
+        // First insert test companies to satisfy foreign key constraints
+        executeSQL("INSERT INTO companies (id, name, description, size, vertical, status, created_at, updated_at) " +
+                   "VALUES (1, 'Test Company 1', 'Test Company Description 1', 'SMALL'::company_size, 'TECH'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW())");
+        
+        executeSQL("INSERT INTO companies (id, name, description, size, vertical, status, created_at, updated_at) " +
+                   "VALUES (2, 'Test Company 2', 'Test Company Description 2', 'MEDIUM'::company_size, 'PHARMACEUTICAL'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW())");
+        
+        // Then insert test agents
         executeSQL("INSERT INTO agents (company_id, name, description, agent_protocol, status, created_at, updated_at) " +
-                   "VALUES (1, 'Test Agent 1', 'Test Description 1', '{\"type\":\"basic\"}', 'ACTIVE', NOW(), NOW())");
+                   "VALUES (1, 'Test Agent 1', 'Test Description 1', '{\"type\":\"basic\"}', 'ACTIVE'::agent_status, NOW(), NOW())");
         
         executeSQL("INSERT INTO agents (company_id, name, description, agent_protocol, status, created_at, updated_at) " +
-                   "VALUES (1, 'Test Agent 2', 'Test Description 2', '{\"type\":\"advanced\"}', 'DISABLED', NOW(), NOW())");
+                   "VALUES (1, 'Test Agent 2', 'Test Description 2', '{\"type\":\"advanced\"}', 'DISABLED'::agent_status, NOW(), NOW())");
         
         executeSQL("INSERT INTO agents (company_id, name, description, agent_protocol, status, created_at, updated_at) " +
-                   "VALUES (2, 'Another Agent', 'Another Description', '{\"type\":\"custom\"}', 'ACTIVE', NOW(), NOW())");
+                   "VALUES (2, 'Another Agent', 'Another Description', '{\"type\":\"custom\"}', 'ACTIVE'::agent_status, NOW(), NOW())");
     }
     
     @Override
     protected void cleanupTestData() throws SQLException {
+        // First delete agents (child records)
         executeSQL("DELETE FROM agents WHERE name LIKE 'Test Agent%' OR name = 'Another Agent'");
+        
+        // Then delete companies (parent records)
+        executeSQL("DELETE FROM companies WHERE id IN (1, 2)");
     }
     
     /**
