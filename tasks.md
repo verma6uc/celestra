@@ -24,7 +24,7 @@
 
 ## Database Connection Setup
 
-- [ ] **Create application.properties file**
+- [x] **Create application.properties file**
   - **Why**: Externalize database configuration for easier maintenance and deployment across different environments.
   - **What**: Create a properties file that includes:
     - Database URL
@@ -32,7 +32,7 @@
     - Connection pool settings
     - Any other database-specific parameters
 
-- [ ] **Implement Database Utility class**
+- [x] **Implement Database Utility class**
   - **Why**: Centralize database connection management to avoid code duplication and ensure consistent handling of connections.
   - **What**: Create a utility class that:
     - Loads configuration from application.properties
