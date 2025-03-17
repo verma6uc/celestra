@@ -126,7 +126,7 @@
 
 ## Invitation System
 
-- [ ] **Implement Invitation Service**
+- [x] **Implement Invitation Service**
   - **Why**: Invitations provide a controlled way to onboard new users.
   - **What**: Create an invitation service that:
     - Generates secure invitation tokens

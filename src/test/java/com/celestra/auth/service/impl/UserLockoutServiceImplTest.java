@@ -19,10 +19,12 @@ import org.mockito.MockitoAnnotations;
 
 import com.celestra.auth.config.TestAuthConfigProvider;
 import com.celestra.auth.service.UserLockoutService;
+import com.celestra.auth.service.AuditService;
 import com.celestra.dao.AuditLogDao;
 import com.celestra.dao.UserDao;
 import com.celestra.dao.UserLockoutDao;
 import com.celestra.dao.UserSessionDao;
+import com.celestra.enums.AuditEventType;
 import com.celestra.model.AuditLog;
 import com.celestra.model.User;
 import com.celestra.model.UserLockout;
@@ -42,12 +44,15 @@ public class UserLockoutServiceImplTest {
     @Mock
     private AuditLogDao auditLogDao;
     
+    @Mock
+    private AuditService auditService;
+    
     private TestAuthConfigProvider authConfig;
     
     private UserLockoutService userLockoutService;
     
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws SQLException {
         MockitoAnnotations.openMocks(this);
         
         // Create and configure test auth config
@@ -57,8 +62,14 @@ public class UserLockoutServiceImplTest {
         authConfig.setLockoutDurationMinutes(60);
         authConfig.setLockoutPermanentAfterConsecutiveTempLockouts(3);
         
+        // Set up mock user for tests
+        User mockUser = new User();
+        mockUser.setId(1);
+        mockUser.setEmail("test@example.com");
+        when(userDao.findById(1)).thenReturn(Optional.of(mockUser));
+        
         userLockoutService = new UserLockoutServiceImpl(
-            userLockoutDao, userDao, userSessionDao, auditLogDao, authConfig
+            userLockoutDao, userDao, userSessionDao, auditLogDao, auditService, authConfig
         );
     }
     
@@ -98,7 +109,7 @@ public class UserLockoutServiceImplTest {
         // Verify DAO interactions
         verify(userDao).findById(userId);
         verify(userLockoutDao).create(any(UserLockout.class));
-        verify(auditLogDao).create(any(AuditLog.class));
+        verify(auditService).recordAccountLockout(any(User.class), eq(ipAddress), eq(reason));
         verify(userSessionDao).findActiveByUserId(userId);
     }
     
@@ -303,9 +314,19 @@ public class UserLockoutServiceImplTest {
         activeLockout.setLockoutStart(Timestamp.from(Instant.now().minus(1, ChronoUnit.HOURS)));
         activeLockout.setLockoutEnd(Timestamp.from(Instant.now().plus(1, ChronoUnit.HOURS)));
         
+        User user = new User();
+        user.setId(userId);
+        user.setEmail("test@example.com");
+        
+        User admin = new User();
+        admin.setId(adminUserId);
+        admin.setEmail("admin@example.com");
+        
         // Mock DAO behavior
         when(userLockoutDao.findActiveByUserId(userId)).thenReturn(Optional.of(activeLockout));
         when(userLockoutDao.updateLockoutEnd(eq(activeLockout.getId()), any(Timestamp.class))).thenReturn(true);
+        when(userDao.findById(userId)).thenReturn(Optional.of(user));
+        when(userDao.findById(adminUserId)).thenReturn(Optional.of(admin));
         
         // Execute the method
         boolean result = userLockoutService.unlockAccount(userId, reason, adminUserId, ipAddress);
@@ -316,7 +337,8 @@ public class UserLockoutServiceImplTest {
         // Verify DAO interactions
         verify(userLockoutDao).findActiveByUserId(userId);
         verify(userLockoutDao).updateLockoutEnd(eq(activeLockout.getId()), any(Timestamp.class));
-        verify(auditLogDao, times(2)).create(any(AuditLog.class)); // One for user, one for admin
+        verify(userDao, times(2)).findById(anyInt());
+        verify(auditService).recordAccountUnlock(any(User.class), eq(ipAddress), any(User.class), eq(reason));
     }
     
     @Test
@@ -339,7 +361,7 @@ public class UserLockoutServiceImplTest {
         // Verify DAO interactions
         verify(userLockoutDao).findActiveByUserId(userId);
         verify(userLockoutDao, never()).updateLockoutEnd(anyInt(), any(Timestamp.class));
-        verifyNoInteractions(auditLogDao);
+        verifyNoInteractions(auditService);
     }
     
     @Test
@@ -356,9 +378,19 @@ public class UserLockoutServiceImplTest {
         temporaryLockout.setLockoutStart(Timestamp.from(Instant.now().minus(1, ChronoUnit.HOURS)));
         temporaryLockout.setLockoutEnd(Timestamp.from(Instant.now().plus(1, ChronoUnit.HOURS)));
         
+        User user = new User();
+        user.setId(userId);
+        user.setEmail("test@example.com");
+        
+        User admin = new User();
+        admin.setId(adminUserId);
+        admin.setEmail("admin@example.com");
+        
         // Mock DAO behavior
         when(userLockoutDao.findActiveByUserId(userId)).thenReturn(Optional.of(temporaryLockout));
         when(userLockoutDao.updateLockoutEnd(eq(temporaryLockout.getId()), isNull())).thenReturn(true);
+        when(userDao.findById(userId)).thenReturn(Optional.of(user));
+        when(userDao.findById(adminUserId)).thenReturn(Optional.of(admin));
         
         // Execute the method
         boolean result = userLockoutService.makeLockoutPermanent(userId, reason, adminUserId, ipAddress);
@@ -369,7 +401,8 @@ public class UserLockoutServiceImplTest {
         // Verify DAO interactions
         verify(userLockoutDao).findActiveByUserId(userId);
         verify(userLockoutDao).updateLockoutEnd(eq(temporaryLockout.getId()), isNull());
-        verify(auditLogDao, times(2)).create(any(AuditLog.class)); // One for user, one for admin
+        verify(userDao, times(2)).findById(anyInt());
+        verify(auditService).recordSecurityEvent(any(), any(User.class), eq(ipAddress), contains("Lockout made permanent"), eq("user_lockouts"), eq(temporaryLockout.getId().toString()), eq(reason));
     }
     
     @Test

@@ -19,6 +19,8 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import com.celestra.auth.config.AuthConfigProvider;
+import com.celestra.auth.service.AuditService;
+import com.celestra.auth.service.impl.AuditServiceImpl;
 import com.celestra.auth.service.LoginService;
 import com.celestra.auth.service.UserLockoutService;
 import com.celestra.dao.AuditLogDao;
@@ -60,6 +62,9 @@ public class LoginServiceImplTest {
     private AuditLogDao auditLogDao;
     
     @Mock
+    private AuditService auditService;
+    
+    @Mock
     private AuthConfigProvider config;
     
     @Mock
@@ -70,7 +75,7 @@ public class LoginServiceImplTest {
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
-        loginService = new TestableLoginServiceImpl(userDao, userSessionDao, failedLoginDao, userLockoutDao, companyDao, auditLogDao, config);
+        loginService = new TestableLoginServiceImpl(userDao, userSessionDao, failedLoginDao, userLockoutDao, companyDao, auditLogDao, auditService, config);
         
         // Configure default behavior for config
         when(config.getLockoutMaxAttempts()).thenReturn(5);
@@ -116,7 +121,7 @@ public class LoginServiceImplTest {
         
         // Verify interactions
         verify(userDao).findByEmail(email);
-        verify(auditLogDao).create(any(AuditLog.class));
+        verify(auditService).recordSuccessfulLogin(any(User.class), eq(ipAddress));
     }
     
     @Test
@@ -177,7 +182,7 @@ public class LoginServiceImplTest {
         // Verify interactions
         verify(userDao, times(2)).findByEmail(email);
         verify(failedLoginDao).create(any(FailedLogin.class));
-        verify(auditLogDao).create(any(AuditLog.class));
+        verify(auditService).recordFailedLogin(any(User.class), eq(email), eq(ipAddress), eq("Invalid password"));
     }
     
     @Test
@@ -219,7 +224,7 @@ public class LoginServiceImplTest {
         // Verify interactions
         verify(userDao, times(2)).findByEmail(email);
         verify(failedLoginDao).create(any(FailedLogin.class));
-        verify(auditLogDao).create(any(AuditLog.class));
+        verify(auditService).recordFailedLogin(any(User.class), eq(email), eq(ipAddress), eq("Account is locked"));
     }
     
     @Test
@@ -261,7 +266,7 @@ public class LoginServiceImplTest {
         verify(userLockoutDao).findActiveByUserId(1);
         verify(companyDao).findById(1);
         verify(failedLoginDao).create(any(FailedLogin.class));
-        verify(auditLogDao).create(any(AuditLog.class));
+        verify(auditService).recordFailedLogin(any(User.class), eq(email), eq(ipAddress), eq("Company is not active"));
     }
     
     @Test
@@ -282,6 +287,12 @@ public class LoginServiceImplTest {
         String ipAddress = "127.0.0.1";
         String userAgent = "Mozilla/5.0";
         Map<String, String> metadata = new HashMap<>();
+
+        // Create a user to be returned by userDao.findById
+        User user = new User();
+        user.setId(userId);
+        user.setEmail("test@example.com");
+        when(userDao.findById(userId)).thenReturn(Optional.of(user));
         
         UserSession session = new UserSession();
         session.setId(1);
@@ -305,7 +316,7 @@ public class LoginServiceImplTest {
         
         // Verify interactions
         verify(userSessionDao).create(any(UserSession.class));
-        verify(auditLogDao).create(any(AuditLog.class));
+        verify(auditService).recordSecurityEvent(any(), any(User.class), eq(ipAddress), contains("Session created"), eq("user_sessions"), eq("1"), isNull());
     }
     
     @Test
@@ -386,8 +397,14 @@ public class LoginServiceImplTest {
         session.setSessionToken(sessionToken);
         session.setIpAddress("127.0.0.1");
         
+        // Create a user to be returned by userDao.findById
+        User user = new User();
+        user.setId(1);
+        user.setEmail("test@example.com");
+        
         when(userSessionDao.findBySessionToken(sessionToken)).thenReturn(Optional.of(session));
         when(userSessionDao.updateExpiresAt(eq(1), any(Timestamp.class))).thenReturn(true);
+        when(userDao.findById(1)).thenReturn(Optional.of(user));
         
         // Act
         boolean result = loginService.endSession(sessionToken, reason);
@@ -398,7 +415,7 @@ public class LoginServiceImplTest {
         // Verify interactions
         verify(userSessionDao).findBySessionToken(sessionToken);
         verify(userSessionDao).updateExpiresAt(eq(1), any(Timestamp.class));
-        verify(auditLogDao).create(any(AuditLog.class));
+        verify(auditService).recordLogout(any(User.class), eq("127.0.0.1"), eq("1"));
     }
     
     @Test
@@ -423,10 +440,16 @@ public class LoginServiceImplTest {
         sessions.add(session1);
         sessions.add(session2);
         
+        // Create a user to be returned by userDao.findById
+        User user = new User();
+        user.setId(userId);
+        user.setEmail("test@example.com");
+        
         when(userSessionDao.findActiveByUserId(userId)).thenReturn(sessions);
         when(userSessionDao.findBySessionToken("token1")).thenReturn(Optional.of(session1));
         when(userSessionDao.findBySessionToken("token2")).thenReturn(Optional.of(session2));
         when(userSessionDao.updateExpiresAt(anyInt(), any(Timestamp.class))).thenReturn(true);
+        when(userDao.findById(userId)).thenReturn(Optional.of(user));
         
         // Act
         int result = loginService.endAllSessions(userId, reason);
@@ -439,7 +462,7 @@ public class LoginServiceImplTest {
         verify(userSessionDao).findBySessionToken("token1");
         verify(userSessionDao).findBySessionToken("token2");
         verify(userSessionDao, times(2)).updateExpiresAt(anyInt(), any(Timestamp.class));
-        verify(auditLogDao, times(2)).create(any(AuditLog.class));
+        verify(auditService, times(2)).recordLogout(any(User.class), eq("127.0.0.1"), anyString());
     }
     
     @Test

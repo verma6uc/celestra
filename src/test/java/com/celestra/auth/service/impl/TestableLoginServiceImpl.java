@@ -7,9 +7,9 @@ import java.sql.Timestamp;
 import static org.mockito.Mockito.*;
 
 import com.celestra.auth.config.AuthConfigProvider;
+import com.celestra.auth.service.AuditService;
 import com.celestra.auth.service.FailedLoginTrackingService;
 import com.celestra.auth.service.UserLockoutService;
-import com.celestra.auth.service.impl.UserLockoutServiceImpl;
 import com.celestra.dao.AuditLogDao;
 import com.celestra.dao.FailedLoginDao;
 import com.celestra.dao.CompanyDao;
@@ -33,7 +33,17 @@ public class TestableLoginServiceImpl extends LoginServiceImpl {
     private boolean accountLockedResult = false;
     private boolean sessionExpiredResult = true;
     private boolean companyActiveResult = true;
-    private UserLockoutService mockUserLockoutService;
+    
+    public TestableLoginServiceImpl(UserDao userDao, UserSessionDao userSessionDao, 
+                                   FailedLoginDao failedLoginDao, UserLockoutDao userLockoutDao, 
+                                   CompanyDao companyDao, AuditLogDao auditLogDao, 
+                                   AuditService auditService, AuthConfigProvider config) {
+        super(userDao, userSessionDao, 
+             new FailedLoginTrackingServiceImpl(failedLoginDao, userDao, auditLogDao, config),
+             createMockUserLockoutService(),
+             failedLoginDao, userLockoutDao, companyDao, auditLogDao, 
+             auditService != null ? auditService : createMockAuditService(), config);
+    }
     
     public TestableLoginServiceImpl(UserDao userDao, UserSessionDao userSessionDao, 
                                    FailedLoginDao failedLoginDao, UserLockoutDao userLockoutDao, 
@@ -42,7 +52,8 @@ public class TestableLoginServiceImpl extends LoginServiceImpl {
         super(userDao, userSessionDao, 
              new FailedLoginTrackingServiceImpl(failedLoginDao, userDao, auditLogDao, config),
              createMockUserLockoutService(),
-             failedLoginDao, userLockoutDao, companyDao, auditLogDao, config);
+             failedLoginDao, userLockoutDao, companyDao, auditLogDao, 
+             createMockAuditService(), config);
     }
     
     private static UserLockoutService createMockUserLockoutService() {
@@ -51,10 +62,21 @@ public class TestableLoginServiceImpl extends LoginServiceImpl {
         return mock;
     }
     
-    public TestableLoginServiceImpl(UserDao userDao, UserSessionDao userSessionDao, FailedLoginTrackingService failedLoginTrackingService,
-                                   UserLockoutService userLockoutService, FailedLoginDao failedLoginDao, UserLockoutDao userLockoutDao, 
-                                   CompanyDao companyDao, AuditLogDao auditLogDao, AuthConfigProvider config) {
-        super(userDao, userSessionDao, failedLoginTrackingService, userLockoutService, failedLoginDao, userLockoutDao, companyDao, auditLogDao, config);
+    private static AuditService createMockAuditService() {
+        AuditService mock = mock(AuditService.class);
+        // The actual behavior will be set by the test methods
+        return mock;
+    }
+    
+    public TestableLoginServiceImpl(UserDao userDao, UserSessionDao userSessionDao, 
+                                   FailedLoginTrackingService failedLoginTrackingService,
+                                   UserLockoutService userLockoutService, 
+                                   FailedLoginDao failedLoginDao, UserLockoutDao userLockoutDao, 
+                                   CompanyDao companyDao, AuditLogDao auditLogDao, 
+                                   AuthConfigProvider config) {
+        super(userDao, userSessionDao, failedLoginTrackingService, userLockoutService, 
+             failedLoginDao, userLockoutDao, companyDao, auditLogDao, 
+             createMockAuditService(), config);
     }
 
     /**
@@ -63,7 +85,13 @@ public class TestableLoginServiceImpl extends LoginServiceImpl {
     public UserLockoutService getMockUserLockoutService() {
         return this.userLockoutService;
     }
-
+    
+    /**
+     * Get the mock AuditService for configuration in tests.
+     */
+    public AuditService getMockAuditService() {
+        return this.auditService;
+    }
     
     /**
      * Set the result to be returned by password verification.
@@ -137,14 +165,14 @@ public class TestableLoginServiceImpl extends LoginServiceImpl {
         
         if (isAccountLocked(user.getId())) {
             recordFailedLogin(email, ipAddress, "Account is locked", metadata);
-            createAuditLog(user.getId(), AuditEventType.FAILED_LOGIN, "Login attempt on locked account", ipAddress, "users", user.getId().toString(), null);
+            auditService.recordFailedLogin(user, email, ipAddress, "Account is locked");
             return Optional.empty();
         }
         
         // Check if the account is active
         if (user.getStatus() != UserStatus.ACTIVE) {
             recordFailedLogin(email, ipAddress, "Account is not active", metadata);
-            createAuditLog(user.getId(), AuditEventType.FAILED_LOGIN, "Login attempt on inactive account", ipAddress, "users", user.getId().toString(), null);
+            auditService.recordFailedLogin(user, email, ipAddress, "Account is not active");
             return Optional.empty();
         }
         
@@ -158,9 +186,7 @@ public class TestableLoginServiceImpl extends LoginServiceImpl {
                 String reason = "Company is not active";
                 
                 recordFailedLogin(email, ipAddress, reason, metadata);
-                createAuditLog(user.getId(), AuditEventType.FAILED_LOGIN, 
-                              "Login attempt with inactive company", 
-                              ipAddress, "users", user.getId().toString(), null);
+                auditService.recordFailedLogin(user, email, ipAddress, reason);
                 
                 // Return empty to indicate authentication failure
                 return Optional.empty();
@@ -177,12 +203,12 @@ public class TestableLoginServiceImpl extends LoginServiceImpl {
                 userLockoutService.lockAccount(user.getId(), failedAttempts, "Too many failed login attempts", ipAddress);
             }
             
-            createAuditLog(user.getId(), AuditEventType.FAILED_LOGIN, "Invalid password", ipAddress, "users", user.getId().toString(), null);
+            auditService.recordFailedLogin(user, email, ipAddress, "Invalid password");
             return Optional.empty();
         }
         
         // Authentication successful
-        createAuditLog(user.getId(), AuditEventType.SUCCESSFUL_LOGIN, "Successful login", ipAddress, "users", user.getId().toString(), null);
+        auditService.recordSuccessfulLogin(user, ipAddress);
         return Optional.of(user);
     }
     
