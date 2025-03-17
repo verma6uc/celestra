@@ -39,25 +39,33 @@ public class UserLockoutDaoImplTest extends BaseDaoTest {
         // Clean up any existing test data
         cleanupTestData();
         
-        // Insert test user
+        // First insert test company to satisfy foreign key constraints
+        executeSQL("INSERT INTO companies (id, name, description, size, vertical, status, created_at, updated_at) " +
+                   "VALUES (1, 'Test Company 1', 'Test Company Description 1', 'SMALL'::company_size, 'TECH'::company_vertical, 'ACTIVE'::company_status, NOW(), NOW())");
+        
+        // Insert test users
         executeSQL("INSERT INTO users (id, company_id, role, email, name, password_hash, status, created_at, updated_at) " +
-                   "VALUES (999, 1, 'REGULAR_USER', 'testuser@test.com', 'Test User', 'hash123', 'ACTIVE', NOW(), NOW())");
+                   "VALUES (999, 1, 'REGULAR_USER'::user_role, 'testuser@test.com', 'Test User', 'hash123', 'ACTIVE'::user_status, NOW(), NOW())");
+        
+        executeSQL("INSERT INTO users (id, company_id, role, email, name, password_hash, status, created_at, updated_at) " +
+                   "VALUES (998, 1, 'REGULAR_USER'::user_role, 'testuser2@test.com', 'Test User 2', 'hash456', 'ACTIVE'::user_status, NOW(), NOW())");
         
         // Insert test lockouts
         executeSQL("INSERT INTO user_lockouts (user_id, lockout_start, lockout_end, failed_attempts, reason, created_at, updated_at) " +
-                   "VALUES (999, NOW(), DATE_ADD(NOW(), INTERVAL 1 DAY), 3, 'Test temporary lockout', NOW(), NOW())");
+                   "VALUES (999, NOW(), NOW() + INTERVAL '1 day', 3, 'Test temporary lockout', NOW(), NOW())");
         
         executeSQL("INSERT INTO user_lockouts (user_id, lockout_start, lockout_end, failed_attempts, reason, created_at, updated_at) " +
                    "VALUES (999, NOW(), NULL, 5, 'Test permanent lockout', NOW(), NOW())");
         
         executeSQL("INSERT INTO user_lockouts (user_id, lockout_start, lockout_end, failed_attempts, reason, created_at, updated_at) " +
-                   "VALUES (999, NOW(), DATE_SUB(NOW(), INTERVAL 1 DAY), 2, 'Test expired lockout', NOW(), NOW())");
+                   "VALUES (999, NOW(), NOW() - INTERVAL '1 day', 2, 'Test expired lockout', NOW(), NOW())");
     }
     
     @Override
     protected void cleanupTestData() throws SQLException {
         executeSQL("DELETE FROM user_lockouts WHERE reason LIKE 'Test%'");
-        executeSQL("DELETE FROM users WHERE email = 'testuser@test.com'");
+        executeSQL("DELETE FROM users WHERE email IN ('testuser@test.com', 'testuser2@test.com')");
+        executeSQL("DELETE FROM companies WHERE id = 1");
     }
     
     /**
@@ -357,7 +365,7 @@ public class UserLockoutDaoImplTest extends BaseDaoTest {
      */
     @Test
     public void testDeleteByUserId() throws SQLException {
-        // Create a new user lockout for a different user
+        // Create a new user lockout for user 998
         UserLockout userLockout = new UserLockout();
         userLockout.setUserId(998);
         userLockout.setLockoutStart(OffsetDateTime.now());
